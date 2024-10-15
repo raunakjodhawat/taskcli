@@ -6,7 +6,7 @@ import java.time.LocalDate
 object Todos {
   final case class Create(todo: String, date: LocalDate) extends Subcommand
   final case class Get(date: Option[LocalDate]) extends Subcommand
-  final case class Update(todo: String) extends Subcommand
+  final case class Update(oldTodo: String, newTodo: String) extends Subcommand
   final case class Delete(todo: String) extends Subcommand
 
   val dateOption: Options[LocalDate] = Options

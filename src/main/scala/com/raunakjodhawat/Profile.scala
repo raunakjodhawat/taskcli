@@ -5,7 +5,8 @@ import zio.cli.{Args, Command, Exists, HelpDoc, Options}
 object Profile {
   final case class Create(profileName: String) extends Subcommand
   final case class Get() extends Subcommand
-  final case class Update(profileName: String) extends Subcommand
+  final case class Update(oldProfileName: String, newProfileName: String)
+      extends Subcommand
   final case class Delete(profileName: String) extends Subcommand
 
   val nameOption: Options[String] =

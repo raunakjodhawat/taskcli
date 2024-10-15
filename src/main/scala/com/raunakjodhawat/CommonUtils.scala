@@ -34,4 +34,22 @@ object CommonUtils {
     if (isProfileTask) Profile.Get()
     else Todos.Get(Some(date))
   }
+
+  val updateCommand: Command[Subcommand] = Command(
+    name = "update",
+    options = Profile.isProfileTaskOption ++ oldOption ++ newOption
+  ).map { case (isProfileTask, oldValue, newValue) =>
+    if (isProfileTask) Profile.Update(oldValue, newValue)
+    else Todos.Update(oldValue, newValue)
+  }
+
+  val deleteCommand: Command[Subcommand] = Command(
+    name = "delete",
+    options = Profile.isProfileTaskOption ++ Profile.nameOption
+  ).map { case (isProfileTask, value) =>
+    if (isProfileTask) Profile.Delete(value)
+    else Todos.Delete(value)
+  }
+
+  val mapZIOError: Throwable => String = e => s"Error: ${e.getMessage}"
 }

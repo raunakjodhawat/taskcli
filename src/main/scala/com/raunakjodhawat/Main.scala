@@ -1,26 +1,20 @@
 package com.raunakjodhawat
 
-import com.raunakjodhawat.CommonUtils.{createCommand, getCommand}
+import com.raunakjodhawat.CommonUtils.{
+  createCommand,
+  deleteCommand,
+  getCommand,
+  updateCommand
+}
 import com.raunakjodhawat.filehandling.FileManager
 import zio.Console.printLine
 import zio.cli.HelpDoc.Span.text
 import zio.cli._
 
 object Main extends ZIOCliDefault {
-
-  /** task create --p (profileName) or --name
-    *      - creates profile if it does not exist
-    * task get --p
-    *      - gets all the profiles
-    * task update --p (old) (new) or --old & --new
-    *      - updates the profile name with new name, if old name exists
-    * task delete --p (profileName) or --name
-    *     - deletes the profile if it exists
-    */
-
   val task: Command[Subcommand] =
     Command("task", Options.none, Args.none)
-      .subcommands(createCommand, getCommand)
+      .subcommands(createCommand, getCommand, updateCommand, deleteCommand)
 
   val cliApp = CliApp.make(
     name = "Task CLI",
