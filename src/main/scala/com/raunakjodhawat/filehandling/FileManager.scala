@@ -51,6 +51,26 @@ object FileManager {
       .runCollect
   }
 
+  def createProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
+    val a = for {
+      profileNames <- getAllProfileNames
+      _ <-
+        if (profileNames.contains(profileName))
+          ZIO.fail(
+            new IllegalArgumentException(
+              s"Profile '$profileName' already exists."
+            )
+          )
+        else ZIO.unit
+      _ <- ZStream(
+        ZSink
+          .fromFile(new File(fileLocation))
+          .contramap(c => ZIO.succeed(c.fromIterable(s"[$profileName]")))
+      ).runDrain
+    } yield ()
+    a
+  }
+
   def createTodoForAProfile(
       profileName: String,
       todo: String,
@@ -82,30 +102,6 @@ object FileManager {
       _ <- ZIO.attempt {
         Using(new java.io.PrintWriter(fileLocation)) { writer =>
           newLines.foreach(writer.println)
-        }
-      }
-    } yield ()
-  }
-  def createProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
-    for {
-      allLines <- ZIO.attempt {
-        Using(scala.io.Source.fromFile(fileLocation)) { source =>
-          source.getLines().toList
-        }.getOrElse(List.empty)
-      }
-      profileIndex = allLines.indexWhere(_.trim == s"[$profileName]")
-      _ <-
-        if (profileIndex != -1)
-          ZIO.fail(
-            new IllegalArgumentException(
-              s"Profile '$profileName' already exists."
-            )
-          )
-        else ZIO.unit
-      _ <- ZIO.attempt {
-        Using(new java.io.PrintWriter(fileLocation)) { writer =>
-          allLines.foreach(writer.println)
-          writer.println(s"[$profileName]")
         }
       }
     } yield ()
