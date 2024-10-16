@@ -8,6 +8,7 @@ import com.raunakjodhawat.CommonUtils.{
 }
 import com.raunakjodhawat.filehandling.FileManager
 import zio.Console.printLine
+import zio.ZIO
 import zio.cli.HelpDoc.Span.text
 import zio.cli._
 
@@ -34,6 +35,10 @@ object Main extends ZIOCliDefault {
     case Todos.Create(todo, date) =>
       FileManager.createTodoForAProfile("raunak", todo, date).map { case _ =>
         printLine(s"Todo $todo created successfully")
+      }
+    case Profile.Get() =>
+      FileManager.getAllProfileNames.flatMap { profiles =>
+        printLine(profiles.mkString("\n"))
       }
   }
 }

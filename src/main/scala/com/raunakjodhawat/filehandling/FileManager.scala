@@ -1,7 +1,10 @@
 package com.raunakjodhawat.filehandling
 
 import zio._
+import zio.stream._
 
+import java.io.{File, FileInputStream, IOException}
+import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import scala.util.Using
 
@@ -12,7 +15,10 @@ object FileManager {
     * todo1, date1
     * todo2, date2
     */
-  val fileLocation: String = "src/main/resources/todo.txt"
+  // val sys = System.getProperty("user.dir")
+//  val config: Config =
+//    ConfigProvider.defaultProvider.load[String]("application")
+  val fileLocation: String = "src/main/resources/todos.txt"
 
   def getAllTodosForAProfile(
       profileName: String
@@ -35,14 +41,14 @@ object FileManager {
     }
   }
 
-  def getAllProfileNames: ZIO[Any, Throwable, List[String]] = {
-    ZIO.attempt {
-      Using(scala.io.Source.fromFile(fileLocation)) { source =>
-        source.getLines().toList.collect {
-          case line if line.startsWith("[") => line.drop(1).dropRight(1)
-        }
-      }.getOrElse(List.empty)
-    }
+  def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
+    ZStream
+      .fromFile(new File(fileLocation))
+      .via(ZPipeline.utf8Decode)
+      .via(ZPipeline.splitLines)
+      .filter(x => x.startsWith("[") && x.endsWith("]"))
+      .map(_.drop(1).dropRight(1))
+      .runCollect
   }
 
   def createTodoForAProfile(
