@@ -2,6 +2,8 @@ package com.raunakjodhawat
 
 import zio.cli.{Command, Options}
 
+import scala.Specializable.Args
+
 object CommonUtils {
   val oldOption: Options[String] =
     Options

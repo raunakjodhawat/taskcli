@@ -15,8 +15,8 @@ object FileManager {
     * todo1, date1
     * todo2, date2
     */
-  val fileLocation: String = "src/main/resources/todos.txt"
-  val tempFileLocation: String = "src/main/resources/todos_temp.txt"
+  val fileLocation: String = FileManagerConfig.fileLocation
+  val tempFileLocation: String = FileManagerConfig.tempFileLocation
   def createFileIfDoesNotExist: ZIO[Any, Throwable, Unit] = {
     ZIO.attempt(new File(fileLocation).exists()).flatMap { exists =>
       if (exists) ZIO.unit
@@ -57,7 +57,11 @@ object FileManager {
             )
           )
         } *> ZIO.attempt {
-          Using(new java.io.PrintWriter(fileLocation)) { writer =>
+          Using(
+            new java.io.PrintWriter(
+              new java.io.FileOutputStream(fileLocation, true)
+            )
+          ) { writer =>
             writer.println(s"[$profileName]")
           }
         }
@@ -94,21 +98,26 @@ object FileManager {
           Using(scala.io.Source.fromFile(fileLocation)) { source =>
             val lines = source.getLines().toList
             val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
+            if (profileIndex == -1) {
+              throw new NoSuchElementException(
+                s"Profile '$profileName' does not exist."
+              )
+            }
             val (before, after) = lines.splitAt(profileIndex)
-            val droppedLines = after.dropWhile(line => !line.startsWith("["))
+            val droppedLines =
+              after.drop(1).takeWhile(line => !line.startsWith("["))
             val tempLines = List(
               s"start: ${java.time.LocalDate.now().plusDays(30)}",
               s"[$profileName]"
-            ) ++ droppedLines.drop(1).takeWhile(line => !line.startsWith("["))
-            val newLines =
-              before ++ after.dropWhile(line => !line.startsWith("["))
+            ) ++ droppedLines ++ List(
+              s"end: ${java.time.LocalDate.now().plusDays(30)}"
+            )
+            val newLines = before ++ after.drop(droppedLines.size + 1)
             (tempLines, newLines)
           }
         }
         .flatMap {
-          case Success(
-                (tempLines: List[String], newLines: List[String])
-              ) =>
+          case Success((tempLines: List[String], newLines: List[String])) =>
             appendToTempFile(tempLines) *> ZIO.attempt {
               Using(new java.io.PrintWriter(fileLocation)) { writer =>
                 newLines.foreach(writer.println)
@@ -141,7 +150,7 @@ object FileManager {
 
   def createTodoForAProfile(
       profileName: String,
-      todo: String,
+      todo: List[String],
       date: LocalDate
   ): ZIO[Any, Throwable, Unit] = {
     for {
