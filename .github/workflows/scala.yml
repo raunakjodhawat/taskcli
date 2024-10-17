@@ -45,12 +45,12 @@ jobs:
             console.log('Coverage Output:', output);
             // const coverageLines = output.match(/\[info\] Statement coverage\.: .*%|\[info\] Branch coverage\.\.\.\.: .*%|\[info\] All done. Coverage was stmt=\[.*%\] branch=\[.*%\]/g);
             if (output) {
-              const message = output.join('\n');
+             // const message = output.join('\n');
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `Coverage Report:\n${message}`
+                body: `Coverage Report:\n${output}`
               });
             } else {
               console.error('Coverage information not found in the output.');
