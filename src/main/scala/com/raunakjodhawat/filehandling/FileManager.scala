@@ -66,6 +66,33 @@ object FileManager {
         }
       })
   }
+  def updateProfile(
+      oldName: String,
+      newName: String
+  ): ZIO[Any, Throwable, Unit] = {
+    getAllProfileNames.flatMap(profileNames => {
+      ZIO.when(!profileNames.contains(oldName)) {
+        ZIO.fail(
+          new NoSuchElementException(s"Profile '$oldName' does not exist.")
+        )
+      } *> ZIO.when(profileNames.contains(newName)) {
+        ZIO.fail(
+          new IllegalArgumentException(s"Profile '$newName' already exists.")
+        )
+      } *> ZIO.attempt {
+        Using(scala.io.Source.fromFile(fileLocation)) { source =>
+          val lines = source.getLines().toList
+          val newLines = lines.map { line =>
+            if (line == s"[$oldName]") s"[$newName]"
+            else line
+          }
+          Using(new java.io.PrintWriter(fileLocation)) { writer =>
+            newLines.foreach(writer.println)
+          }
+        }
+      }
+    })
+  }
 
   /** Auto clearing of tasks after 30 days
     * task clearCache
