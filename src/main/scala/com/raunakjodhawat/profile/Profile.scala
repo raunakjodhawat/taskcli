@@ -1,6 +1,7 @@
-package com.raunakjodhawat
+package com.raunakjodhawat.profile
 
-import zio.cli.{Args, Command, Exists, HelpDoc, Options}
+import com.raunakjodhawat.utils.Subcommand
+import zio.cli.Options
 
 object Profile {
   final case class Create(profileName: String) extends Subcommand

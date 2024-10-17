@@ -1,5 +1,6 @@
-package com.raunakjodhawat
+package com.raunakjodhawat.todo
 
+import com.raunakjodhawat.utils.Subcommand
 import zio.cli.{Args, Options}
 
 import java.time.LocalDate

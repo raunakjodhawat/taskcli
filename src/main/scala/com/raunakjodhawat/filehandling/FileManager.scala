@@ -3,10 +3,9 @@ package com.raunakjodhawat.filehandling
 import zio._
 import zio.stream._
 
-import java.io.{File, FileInputStream, IOException}
-import java.nio.charset.StandardCharsets
+import java.io.{File, IOException}
 import java.time.LocalDate
-import scala.util.{Failure, Success, Try, Using}
+import scala.util.{Failure, Success, Using}
 
 object FileManager {
 
