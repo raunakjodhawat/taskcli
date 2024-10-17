@@ -43,9 +43,9 @@ jobs:
             const fs = require('fs');
             const output = fs.readFileSync('coverage_output.txt', 'utf8');
             console.log('Coverage Output:', output);
-            const coverageLines = output.match(/\[info\] Statement coverage\.: .*%|\[info\] Branch coverage\.\.\.\.: .*%|\[info\] All done. Coverage was stmt=\[.*%\] branch=\[.*%\]/g);
-            if (coverageLines) {
-              const message = coverageLines.join('\n');
+            // const coverageLines = output.match(/\[info\] Statement coverage\.: .*%|\[info\] Branch coverage\.\.\.\.: .*%|\[info\] All done. Coverage was stmt=\[.*%\] branch=\[.*%\]/g);
+            if (output) {
+              const message = output.join('\n');
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
