@@ -26,7 +26,7 @@ object Profile {
       .withDefault(false) ?? "Name of the profile"
 
   object Operations {
-    def get: ZIO[Any, Throwable, Any] = FileManager.getAllProfileNames
+    def get: ZIO[Any, Throwable, Any] = ProfileManager.getAllProfileNames
       .flatMap(profiles => {
         ZIO.ifZIO(ZIO.succeed(profiles.isEmpty))(
           printLine("Warning! No profiles found"),
@@ -34,18 +34,18 @@ object Profile {
         )
       })
 
-    def create(name: String): ZIO[Any, Throwable, Any] = FileManager
+    def create(name: String): ZIO[Any, Throwable, Any] = ProfileManager
       .createProfile(name)
       .flatMap(_ => printLine(s"Profile '$name' created successfully"))
       .catchAll(_ => printLine(s"Profile '$name' already exists"))
 
-    def delete(name: String): ZIO[Any, Throwable, Any] = FileManager
+    def delete(name: String): ZIO[Any, Throwable, Any] = ProfileManager
       .deleteProfile(name)
       .flatMap(_ => printLine(s"Profile '$name' deleted successfully"))
       .catchAll(_ => printLine(s"Profile '$name' does not exist"))
 
     def update(oldName: String, newName: String): ZIO[Any, Throwable, Any] =
-      FileManager
+      ProfileManager
         .updateProfile(oldName, newName)
         .flatMap(_ => printLine(s"Profile '$oldName' updated to '$newName'"))
         .catchAll(_ => printLine(s"Profile '$oldName' does not exist"))
