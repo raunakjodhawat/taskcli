@@ -27,8 +27,6 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
           cache: 'sbt'
-      - name: Run tests
-        run: sbt test
       - name: Run coverage
         run: sbt coverage test coverageReport
       - name: Upload coverage report
@@ -42,12 +40,21 @@ jobs:
           script: |
             const fs = require('fs');
             const reportPath = 'target/scala-2.13/scoverage-report/scoverage.xml';
-            const report = fs.readFileSync(reportPath, 'utf8');
-            const coverage = report.match(/<statement-rate>(.*?)<\/statement-rate>/)[1];
-            const message = `Coverage Report: ${coverage * 100}%`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: message
-            });
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+              const match = report.match(/<statement-rate>(.*?)<\/statement-rate>/);
+              if (match) {
+                const coverage = match[1];
+                const message = `Coverage Report: ${(coverage * 100).toFixed(2)}%`;
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: message
+                });
+              } else {
+                console.error('Coverage rate not found in the report.');
+              }
+            } else {
+              console.error('Coverage report file not found.');
+            }
