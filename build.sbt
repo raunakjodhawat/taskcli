@@ -19,3 +19,5 @@ libraryDependencies += "dev.zio" %% "zio-test-sbt" % "2.1.11" % Test
 libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.3" % Test
 libraryDependencies += "dev.zio" %% "zio-test-junit" % "2.1.11" % Test
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+
+coverageEnabled := true
