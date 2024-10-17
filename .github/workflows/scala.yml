@@ -27,8 +27,10 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
           cache: 'sbt'
-      - name: Run coverage
-        run: sbt coverage test coverageReport
+      - name: Run Tests with Coverage
+        id: coverage
+        run: |
+          sbt coverage test coverageReport | tee coverage_output.txt
       - name: Upload coverage report
         uses: actions/upload-artifact@v3
         with:
@@ -39,22 +41,16 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const reportPath = 'target/scala-2.13/scoverage-report/scoverage.xml';
-            if (fs.existsSync(reportPath)) {
-              const report = fs.readFileSync(reportPath, 'utf8');
-              const match = report.match(/<statement-rate>(.*?)<\/statement-rate>/);
-              if (match) {
-                const coverage = match[1];
-                const message = `Coverage Report: ${(coverage * 100).toFixed(2)}%`;
-                github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: message
-                });
-              } else {
-                console.error('Coverage rate not found in the report.');
-              }
+            const output = fs.readFileSync('coverage_output.txt', 'utf8');
+            const coverageLines = output.match(/\[info\] Statement coverage\.: .*%|\[info\] Branch coverage\.\.\.\.: .*%|\[info\] All done. Coverage was stmt=\[.*%\] branch=\[.*%\]/g);
+            if (coverageLines) {
+              const message = coverageLines.join('\n');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `Coverage Report:\n${message}`
+              });
             } else {
-              console.error('Coverage report file not found.');
+              console.error('Coverage information not found in the output.');
             }
