@@ -1,12 +1,11 @@
 package com.raunakjodhawat
 
 import com.raunakjodhawat.filehandling.FileManagerConfig
-import org.junit.runner.RunWith
 import zio.{Chunk, Scope, ULayer, ZIO, ZIOAppArgs, ZLayer}
 import zio.test.Assertion.equalTo
 import zio.test.TestAspect.{beforeAll, sequential}
 import zio.test._
-import zio.test.junit.{JUnitRunnableSpec, ZTestJUnitRunner}
+import zio.test.junit.JUnitRunnableSpec
 
 object E2ESpec extends JUnitRunnableSpec {
   val testArgsLayer: ULayer[ZIOAppArgs] =
@@ -89,6 +88,103 @@ object E2ESpec extends JUnitRunnableSpec {
               "Profile 'profile1' created successfully\n",
               "Profile 'profile2' created successfully\n",
               "profile1\nprofile2\n"
+            )
+          )
+        )
+      },
+      test("delete 2 profiles") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String]("delete", "-p", "--name", "profile1")
+          )
+          _ <- Main.cliApp.run(
+            List[String]("delete", "-p", "--name", "profile2")
+          )
+          _ <- Main.cliApp.run(List[String]("get", "-p"))
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(
+            Vector(
+              "Profile 'profile1' deleted successfully\n",
+              "Profile 'profile2' deleted successfully\n",
+              "Warning! No profiles found\n"
+            )
+          )
+        )
+      },
+      test("updating a profile name with non-existent profile") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String](
+              "update",
+              "-p",
+              "--old",
+              "profile1",
+              "--new",
+              "profile2"
+            )
+          )
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(Vector("Profile 'profile1' does not exist\n"))
+        )
+      },
+      test("create 1 profile") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String]("create", "-p", "--name", "profile1")
+          )
+          _ <- Main.cliApp.run(List[String]("get", "-p"))
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(
+            Vector(
+              "Profile 'profile1' created successfully\n",
+              "profile1\n"
+            )
+          )
+        )
+      },
+      test("updating a profile name") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String](
+              "update",
+              "-p",
+              "--old",
+              "profile1",
+              "--new",
+              "profile2"
+            )
+          )
+          _ <- Main.cliApp.run(List[String]("get", "-p"))
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(
+            Vector(
+              "Profile 'profile1' updated to 'profile2'\n",
+              "profile2\n"
+            )
+          )
+        )
+      },
+      test("updating a profile with some existing name") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String](
+              "update",
+              "-p",
+              "--old",
+              "profile2",
+              "--new",
+              "profile2"
+            )
+          )
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(
+            Vector(
+              "Profile 'profile2' does not exist\n"
             )
           )
         )
