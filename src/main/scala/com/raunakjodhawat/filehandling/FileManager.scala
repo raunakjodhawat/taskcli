@@ -6,7 +6,7 @@ import zio.stream._
 import java.io.{File, FileInputStream, IOException}
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
-import scala.util.Using
+import scala.util.{Failure, Success, Try, Using}
 
 object FileManager {
 
@@ -16,7 +16,7 @@ object FileManager {
     * todo2, date2
     */
   val fileLocation: String = "src/main/resources/todos.txt"
-
+  val tempFileLocation: String = "src/main/resources/todos_temp.txt"
   def createFileIfDoesNotExist: ZIO[Any, Throwable, Unit] = {
     ZIO.attempt(new File(fileLocation).exists()).flatMap { exists =>
       if (exists) ZIO.unit
@@ -30,7 +30,13 @@ object FileManager {
       }
     }
   }
-
+  def appendToTempFile(append: List[String]): ZIO[Any, Throwable, Unit] = {
+    ZIO.attempt {
+      Using(new java.io.PrintWriter(tempFileLocation)) { writer =>
+        append.foreach(writer.println)
+      }
+    }
+  }
   def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
     createFileIfDoesNotExist *>
       ZStream
@@ -57,28 +63,60 @@ object FileManager {
         }
       })
   }
+
+  /** Auto clearing of tasks after 30 days
+    * task clearCache
+    */
+  /** Delete a profile and all the associated tasks of that profile
+    * all tasks are transferred to a temp file, with an expiry date (to be cleared after 30 days)
+    *
+    * temp file format
+    * start: [expiryDate]
+    * [profileName]
+    * todo1, date1
+    * todo2, date2
+    * end: [expiryDate]
+    *
+    * If you want to delete the profile and task from temp file as well
+    * -- task delete --profile profileName --all
+    *
+    * @param profileName
+    * @return
+    */
   def deleteProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
-    getAllProfileNames.flatMap(profileNames => {
-      ZIO.when(!profileNames.contains(profileName)) {
+    getAllProfileNames.flatMap { profileNames =>
+      ZIO.whenZIO(ZIO.succeed(!profileNames.contains(profileName))) {
         ZIO.fail(
-          new NoSuchElementException(
-            s"Profile '$profileName' does not exist."
-          )
+          new NoSuchElementException(s"Profile '$profileName' does not exist.")
         )
-      } *> ZIO.attempt {
-        Using(scala.io.Source.fromFile(fileLocation)) { source =>
-          val lines = source.getLines().toList
-          val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
-          val (before, after) = lines.splitAt(profileIndex)
-          val newLines = before ++ after.dropWhile(line =>
-            !line.startsWith("[")
-          )
-          Using(new java.io.PrintWriter(fileLocation)) { writer =>
-            newLines.foreach(writer.println)
+      } *> ZIO
+        .attempt {
+          Using(scala.io.Source.fromFile(fileLocation)) { source =>
+            val lines = source.getLines().toList
+            val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
+            val (before, after) = lines.splitAt(profileIndex)
+            val droppedLines = after.dropWhile(line => !line.startsWith("["))
+            val tempLines = List(
+              s"start: ${java.time.LocalDate.now().plusDays(30)}",
+              s"[$profileName]"
+            ) ++ droppedLines.drop(1).takeWhile(line => !line.startsWith("["))
+            val newLines =
+              before ++ after.dropWhile(line => !line.startsWith("["))
+            (tempLines, newLines)
           }
         }
-      }
-    })
+        .flatMap {
+          case Success(
+                (tempLines: List[String], newLines: List[String])
+              ) =>
+            appendToTempFile(tempLines) *> ZIO.attempt {
+              Using(new java.io.PrintWriter(fileLocation)) { writer =>
+                newLines.foreach(writer.println)
+              }
+            }
+          case Failure(exception) => ZIO.fail(exception)
+        }
+    }
   }
   def getAllTodosForAProfile(
       profileName: String
@@ -136,8 +174,6 @@ object FileManager {
       }
     } yield ()
   }
-
-
 
   def updateProfileName(
       oldProfileName: String,

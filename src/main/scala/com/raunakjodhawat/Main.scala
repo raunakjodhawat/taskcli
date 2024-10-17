@@ -7,7 +7,7 @@ import com.raunakjodhawat.CommonUtils.{
   updateCommand
 }
 import com.raunakjodhawat.filehandling.FileManager
-import zio.Console.printLine
+import zio.Console.{printError, printLine, printLineError}
 import zio.ZIO
 import zio.cli.HelpDoc.Span.text
 import zio.cli._
@@ -23,22 +23,27 @@ object Main extends ZIOCliDefault {
     summary = text("a task manager for your daily todos"),
     command = task
   ) {
+    case Profile.Get() =>
+      FileManager.getAllProfileNames.flatMap(profiles => {
+        ZIO.ifZIO(ZIO.succeed(profiles.isEmpty))(
+          printLine("Warning! No profiles found"),
+          printLine(profiles.mkString("\n"))
+        )
+      })
+
     case Profile.Create(name) =>
       FileManager
         .createProfile(name)
-        .map { _ =>
-          printLine(s"Profile $name created successfully")
-        }
-        .mapError { e =>
-          printLine(s"Error creating profile")
-        }
+        .map(_ => printLine(s"Profile $name created successfully"))
+        .catchAll(e =>
+          printLineError(s"Error! creating profile: ${e.getMessage}")
+        )
+    case Profile.Delete(name) =>
+      FileManager
+        .deleteProfile(name)
+        .map(_ => printLine(s"Profile $name deleted successfully"))
     case Todos.Create(todo, date) =>
-      FileManager.createTodoForAProfile("raunak", todo, date).map { case _ =>
-        printLine(s"Todo $todo created successfully")
-      }
-    case Profile.Get() =>
-      FileManager.getAllProfileNames.flatMap { profiles =>
-        printLine(profiles.mkString("\n"))
-      }
+      FileManager.createTodoForAProfile("raunak", todo, date)
+
   }
 }
