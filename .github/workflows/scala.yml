@@ -30,28 +30,4 @@ jobs:
       - name: Run Tests with Coverage
         id: coverage
         run: |
-          sbt coverage test coverageReport | tee coverage_output.txt
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-report
-          path: target/scala-2.13/scoverage-report
-      - name: Post coverage summary
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const output = fs.readFileSync('coverage_output.txt', 'utf8');
-            console.log('Coverage Output:', output);
-            // const coverageLines = output.match(/\[info\] Statement coverage\.: .*%|\[info\] Branch coverage\.\.\.\.: .*%|\[info\] All done. Coverage was stmt=\[.*%\] branch=\[.*%\]/g);
-            if (output) {
-             // const message = output.join('\n');
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `Coverage Report:\n${output}`
-              });
-            } else {
-              console.error('Coverage information not found in the output.');
-            }
+          sbt coverage test coverageReport
