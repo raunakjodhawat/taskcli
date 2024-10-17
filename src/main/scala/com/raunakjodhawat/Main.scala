@@ -34,14 +34,13 @@ object Main extends ZIOCliDefault {
     case Profile.Create(name) =>
       FileManager
         .createProfile(name)
-        .map(_ => printLine(s"Profile $name created successfully"))
-        .catchAll(e =>
-          printLineError(s"Error! creating profile: ${e.getMessage}")
-        )
+        .flatMap(_ => printLine(s"Profile '$name' created successfully"))
+        .catchAll(_ => printLine(s"Profile '$name' already exists"))
     case Profile.Delete(name) =>
       FileManager
         .deleteProfile(name)
-        .map(_ => printLine(s"Profile $name deleted successfully"))
+        .flatMap(_ => printLine(s"Profile '$name' deleted successfully"))
+        .catchAll(_ => printLine(s"Profile '$name' does not exist"))
     case Todos.Create(todo, date) =>
       FileManager.createTodoForAProfile("raunak", todo, date)
 
