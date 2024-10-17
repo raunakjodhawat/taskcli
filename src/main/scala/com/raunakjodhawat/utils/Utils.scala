@@ -1,10 +1,10 @@
-package com.raunakjodhawat
+package com.raunakjodhawat.utils
 
+import com.raunakjodhawat.profile.Profile
+import com.raunakjodhawat.todo.Todos
 import zio.cli.{Command, Options}
 
-import scala.Specializable.Args
-
-object CommonUtils {
+object Utils {
   val oldOption: Options[String] =
     Options
       .text("old")
@@ -53,5 +53,4 @@ object CommonUtils {
     else Todos.Delete(value)
   }
 
-  val mapZIOError: Throwable => String = e => s"Error: ${e.getMessage}"
 }

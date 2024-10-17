@@ -1,13 +1,11 @@
 package com.raunakjodhawat
 
-import com.raunakjodhawat.CommonUtils.{
-  createCommand,
-  deleteCommand,
-  getCommand,
-  updateCommand
-}
+import com.raunakjodhawat.utils.Utils.{createCommand, deleteCommand, getCommand, updateCommand}
 import com.raunakjodhawat.filehandling.FileManager
-import zio.Console.{printError, printLine, printLineError}
+import com.raunakjodhawat.profile.Profile
+import com.raunakjodhawat.todo.Todos
+import com.raunakjodhawat.utils.Subcommand
+import zio.Console.printLine
 import zio.ZIO
 import zio.cli.HelpDoc.Span.text
 import zio.cli._
