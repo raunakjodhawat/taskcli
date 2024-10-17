@@ -29,5 +29,4 @@ jobs:
           cache: 'sbt'
       - name: Run Tests with Coverage
         id: coverage
-        run: |
-          sbt coverage test coverageReport
+        run: sbt coverage test coverageReport
