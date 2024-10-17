@@ -1,5 +1,26 @@
 # Task CLI
+```declarative
+  ______           __      ________    ____
+ /_  __/___ ______/ /__   / ____/ /   /  _/
+  / / / __ `/ ___/ //_/  / /   / /    / /  
+ / / / /_/ (__  ) ,<    / /___/ /____/ /   
+/_/  \__,_/____/_/|_|   \____/_____/___/   
+                                           
 
+
+Task CLI v0.0.1 -- a task manager for your daily todos
+
+USAGE
+
+  $ task <command>
+
+COMMANDS
+
+  - create [[(-p, --profile)]] [(-n, --name text)] [(-d, --date date)] <todo>...  
+  - get [[(-p, --profile)]] [(-d, --date date)]                                   
+  - update [[(-p, --profile)]] [(-o, --old text)] [(-n, --new text)]              
+  - delete [[(-p, --profile)]] [(-n, --name text)]        
+```
 ## Overview
 
 Task CLI is a command-line interface (CLI) application for managing daily todos. It allows users to create, retrieve, update, and delete profiles and todos associated with those profiles. The application is built using Scala, ZIO, and ZIO CLI.
