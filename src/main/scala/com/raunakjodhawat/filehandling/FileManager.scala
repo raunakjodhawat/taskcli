@@ -15,11 +15,71 @@ object FileManager {
     * todo1, date1
     * todo2, date2
     */
-  // val sys = System.getProperty("user.dir")
-//  val config: Config =
-//    ConfigProvider.defaultProvider.load[String]("application")
   val fileLocation: String = "src/main/resources/todos.txt"
 
+  def createFileIfDoesNotExist: ZIO[Any, Throwable, Unit] = {
+    ZIO.attempt(new File(fileLocation).exists()).flatMap { exists =>
+      if (exists) ZIO.unit
+      else {
+        ZIO
+          .attempt(new File(fileLocation).createNewFile())
+          .unit
+          .orElseFail(
+            new IOException(s"Error creating file at location $fileLocation")
+          )
+      }
+    }
+  }
+
+  def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
+    createFileIfDoesNotExist *>
+      ZStream
+        .fromFile(new File(fileLocation))
+        .via(ZPipeline.utf8Decode)
+        .via(ZPipeline.splitLines)
+        .filter(x => x.startsWith("[") && x.endsWith("]"))
+        .map(_.drop(1).dropRight(1))
+        .runCollect
+  }
+  def createProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
+    getAllProfileNames
+      .flatMap(profileNames => {
+        ZIO.when(profileNames.contains(profileName)) {
+          ZIO.fail(
+            new IllegalArgumentException(
+              s"Profile '$profileName' already exists."
+            )
+          )
+        } *> ZIO.attempt {
+          Using(new java.io.PrintWriter(fileLocation)) { writer =>
+            writer.println(s"[$profileName]")
+          }
+        }
+      })
+  }
+  def deleteProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
+    getAllProfileNames.flatMap(profileNames => {
+      ZIO.when(!profileNames.contains(profileName)) {
+        ZIO.fail(
+          new NoSuchElementException(
+            s"Profile '$profileName' does not exist."
+          )
+        )
+      } *> ZIO.attempt {
+        Using(scala.io.Source.fromFile(fileLocation)) { source =>
+          val lines = source.getLines().toList
+          val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
+          val (before, after) = lines.splitAt(profileIndex)
+          val newLines = before ++ after.dropWhile(line =>
+            !line.startsWith("[")
+          )
+          Using(new java.io.PrintWriter(fileLocation)) { writer =>
+            newLines.foreach(writer.println)
+          }
+        }
+      }
+    })
+  }
   def getAllTodosForAProfile(
       profileName: String
   ): ZIO[Any, Throwable, List[(String, String)]] = {
@@ -39,36 +99,6 @@ object FileManager {
         }
       }.getOrElse(List.empty)
     }
-  }
-
-  def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
-    ZStream
-      .fromFile(new File(fileLocation))
-      .via(ZPipeline.utf8Decode)
-      .via(ZPipeline.splitLines)
-      .filter(x => x.startsWith("[") && x.endsWith("]"))
-      .map(_.drop(1).dropRight(1))
-      .runCollect
-  }
-
-  def createProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
-    val a = for {
-      profileNames <- getAllProfileNames
-      _ <-
-        if (profileNames.contains(profileName))
-          ZIO.fail(
-            new IllegalArgumentException(
-              s"Profile '$profileName' already exists."
-            )
-          )
-        else ZIO.unit
-      _ <- ZStream(
-        ZSink
-          .fromFile(new File(fileLocation))
-          .contramap(c => ZIO.succeed(c.fromIterable(s"[$profileName]")))
-      ).runDrain
-    } yield ()
-    a
   }
 
   def createTodoForAProfile(
@@ -107,32 +137,7 @@ object FileManager {
     } yield ()
   }
 
-  def deleteProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
-    for {
-      allLines <- ZIO.attempt {
-        Using(scala.io.Source.fromFile(fileLocation)) { source =>
-          source.getLines().toList
-        }.getOrElse(List.empty)
-      }
-      profileIndex = allLines.indexWhere(_.trim == s"[$profileName]")
-      _ <-
-        if (profileIndex == -1)
-          ZIO.fail(
-            new NoSuchElementException(
-              s"Profile '$profileName' does not exist."
-            )
-          )
-        else ZIO.unit
-      newLines = allLines.take(profileIndex) ++ allLines.dropWhile(line =>
-        !line.startsWith("[", profileIndex + 1)
-      )
-      _ <- ZIO.attempt {
-        Using(new java.io.PrintWriter(fileLocation)) { writer =>
-          newLines.foreach(writer.println)
-        }
-      }
-    } yield ()
-  }
+
 
   def updateProfileName(
       oldProfileName: String,

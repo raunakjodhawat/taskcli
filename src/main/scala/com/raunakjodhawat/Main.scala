@@ -30,7 +30,7 @@ object Main extends ZIOCliDefault {
           printLine(s"Profile $name created successfully")
         }
         .mapError { e =>
-          printLine(s"Error creating profile: ${e.getMessage}")
+          printLine(s"Error creating profile")
         }
     case Todos.Create(todo, date) =>
       FileManager.createTodoForAProfile("raunak", todo, date).map { case _ =>
