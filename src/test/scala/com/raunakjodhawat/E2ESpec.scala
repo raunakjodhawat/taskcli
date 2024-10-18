@@ -7,6 +7,9 @@ import zio.test.TestAspect.{beforeAll, sequential}
 import zio.test._
 import zio.test.junit.JUnitRunnableSpec
 
+import java.io.FileReader
+import scala.util.Using
+
 object E2ESpec extends JUnitRunnableSpec {
   val testArgsLayer: ULayer[ZIOAppArgs] =
     ZLayer.succeed(ZIOAppArgs(Chunk.empty[String]))

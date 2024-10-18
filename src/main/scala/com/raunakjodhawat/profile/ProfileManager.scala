@@ -1,29 +1,17 @@
 package com.raunakjodhawat.profile
 
-import com.raunakjodhawat.filehandling.FileManager.{
+import com.raunakjodhawat.filehandling.FileManager.fileLocation
+import com.raunakjodhawat.filehandling.FileManagerConfig.{
   appendToTempFile,
-  fileLocation
+  createFileIfDoesNotExist
 }
 import zio.stream.{ZPipeline, ZStream}
 import zio.{Chunk, ZIO}
 
-import java.io.{File, IOException}
+import java.io.File
 import scala.util.{Failure, Success, Using}
 
 object ProfileManager {
-  private def createFileIfDoesNotExist: ZIO[Any, Throwable, Unit] = {
-    ZIO.attempt(new File(fileLocation).exists()).flatMap { exists =>
-      if (exists) ZIO.unit
-      else {
-        ZIO
-          .attempt(new File(fileLocation).createNewFile())
-          .unit
-          .orElseFail(
-            new IOException(s"Error creating file at location $fileLocation")
-          )
-      }
-    }
-  }
   def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
     createFileIfDoesNotExist *>
       ZStream
@@ -83,6 +71,13 @@ object ProfileManager {
   }
   def deleteProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
     getAllProfileNames.flatMap { profileNames =>
+      ZIO.whenZIO(ZIO.succeed(profileNames.length == 1)) {
+        ZIO.fail(
+          new IllegalStateException(
+            s"Profile '$profileName' can't be deleted, as it's the default"
+          )
+        )
+      }
       ZIO.whenZIO(ZIO.succeed(!profileNames.contains(profileName))) {
         ZIO.fail(
           new NoSuchElementException(s"Profile '$profileName' does not exist.")

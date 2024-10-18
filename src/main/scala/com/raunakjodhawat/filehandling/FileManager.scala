@@ -14,14 +14,6 @@ object FileManager {
   val fileLocation: String = FileManagerConfig.fileLocation
   val tempFileLocation: String = FileManagerConfig.tempFileLocation
 
-  def appendToTempFile(append: List[String]): ZIO[Any, Throwable, Unit] = {
-    ZIO.attempt {
-      Using(new java.io.PrintWriter(tempFileLocation)) { writer =>
-        append.foreach(writer.println)
-      }
-    }
-  }
-
   def getAllTodosForAProfile(
       profileName: String
   ): ZIO[Any, Throwable, List[(String, String)]] = {
