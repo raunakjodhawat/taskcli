@@ -42,7 +42,7 @@ object Profile {
     def delete(name: String): ZIO[Any, Throwable, Any] = ProfileManager
       .deleteProfile(name)
       .flatMap(_ => printLine(s"Profile '$name' deleted successfully"))
-      .catchAll(_ => printLine(s"Profile '$name' does not exist"))
+      .catchAll(e => printLine(e.getMessage))
 
     def update(oldName: String, newName: String): ZIO[Any, Throwable, Any] =
       ProfileManager

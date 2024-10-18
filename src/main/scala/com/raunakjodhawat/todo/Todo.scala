@@ -4,7 +4,7 @@ import com.raunakjodhawat.utils.Subcommand
 import zio.cli.{Args, Options}
 
 import java.time.LocalDate
-object Todos {
+object Todo {
   final case class Create(todo: List[String], date: LocalDate)
       extends Subcommand
   final case class Get(date: Option[LocalDate]) extends Subcommand

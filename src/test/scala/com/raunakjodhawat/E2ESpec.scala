@@ -24,7 +24,7 @@ object E2ESpec extends JUnitRunnableSpec {
         for {
           _ <- Main.cliApp.run(List[String]("get", "-p"))
           output <- TestConsole.output
-        } yield assert(output)(equalTo(Vector("Warning! No profiles found\n")))
+        } yield assert(output)(equalTo(Vector("default\n")))
       },
       test("create a profile") {
         for {
@@ -36,7 +36,7 @@ object E2ESpec extends JUnitRunnableSpec {
           equalTo(Vector("Profile 'profile1' created successfully\n"))
         )
       },
-      test("creating profile with existing profile") {
+      test("creating profile with existing name") {
         for {
           _ <- Main.cliApp.run(
             List[String]("create", "-p", "--name", "profile1")
@@ -59,6 +59,19 @@ object E2ESpec extends JUnitRunnableSpec {
           output <- TestConsole.output
         } yield assert(output)(
           equalTo(Vector("Profile 'profile1' deleted successfully\n"))
+        )
+        // todo: check if deleting adds the content to temp file
+      },
+      test("deleting the default profile") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String]("delete", "-p", "--name", "default")
+          )
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(
+            Vector("Profile 'default' can't be deleted, as it's the default\n")
+          )
         )
         // todo: check if deleting adds the content to temp file
       },
@@ -87,7 +100,7 @@ object E2ESpec extends JUnitRunnableSpec {
             Vector(
               "Profile 'profile1' created successfully\n",
               "Profile 'profile2' created successfully\n",
-              "profile1\nprofile2\n"
+              "default\nprofile1\nprofile2\n"
             )
           )
         )
@@ -107,7 +120,7 @@ object E2ESpec extends JUnitRunnableSpec {
             Vector(
               "Profile 'profile1' deleted successfully\n",
               "Profile 'profile2' deleted successfully\n",
-              "Warning! No profiles found\n"
+              "default\n"
             )
           )
         )
@@ -140,7 +153,7 @@ object E2ESpec extends JUnitRunnableSpec {
           equalTo(
             Vector(
               "Profile 'profile1' created successfully\n",
-              "profile1\n"
+              "default\nprofile1\n"
             )
           )
         )
@@ -163,7 +176,7 @@ object E2ESpec extends JUnitRunnableSpec {
           equalTo(
             Vector(
               "Profile 'profile1' updated to 'profile2'\n",
-              "profile2\n"
+              "default\nprofile2\n"
             )
           )
         )
@@ -185,6 +198,29 @@ object E2ESpec extends JUnitRunnableSpec {
           equalTo(
             Vector(
               "Profile 'profile2' does not exist\n"
+            )
+          )
+        )
+      },
+      test("updating default profile name") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String](
+              "update",
+              "-p",
+              "--old",
+              "default",
+              "--new",
+              "profile1"
+            )
+          )
+          _ <- Main.cliApp.run(List[String]("get", "-p"))
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(
+            Vector(
+              "Profile 'default' updated to 'profile1'\n",
+              "profile1\nprofile2\n"
             )
           )
         )

@@ -1,29 +1,17 @@
 package com.raunakjodhawat.profile
 
-import com.raunakjodhawat.filehandling.FileManager.{
+import com.raunakjodhawat.filehandling.FileManager.fileLocation
+import com.raunakjodhawat.filehandling.FileManagerConfig.{
   appendToTempFile,
-  fileLocation
+  createFileIfDoesNotExist
 }
 import zio.stream.{ZPipeline, ZStream}
 import zio.{Chunk, ZIO}
 
-import java.io.{File, IOException}
+import java.io.File
 import scala.util.{Failure, Success, Using}
 
 object ProfileManager {
-  private def createFileIfDoesNotExist: ZIO[Any, Throwable, Unit] = {
-    ZIO.attempt(new File(fileLocation).exists()).flatMap { exists =>
-      if (exists) ZIO.unit
-      else {
-        ZIO
-          .attempt(new File(fileLocation).createNewFile())
-          .unit
-          .orElseFail(
-            new IOException(s"Error creating file at location $fileLocation")
-          )
-      }
-    }
-  }
   def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
     createFileIfDoesNotExist *>
       ZStream
@@ -85,40 +73,53 @@ object ProfileManager {
     getAllProfileNames.flatMap { profileNames =>
       ZIO.whenZIO(ZIO.succeed(!profileNames.contains(profileName))) {
         ZIO.fail(
-          new NoSuchElementException(s"Profile '$profileName' does not exist.")
+          new NoSuchElementException(
+            s"Profile '$profileName' does not exist"
+          )
         )
-      } *> ZIO
-        .attempt {
-          Using(scala.io.Source.fromFile(fileLocation)) { source =>
-            val lines = source.getLines().toList
-            val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
-            if (profileIndex == -1) {
-              throw new NoSuchElementException(
-                s"Profile '$profileName' does not exist."
-              )
-            }
-            val (before, after) = lines.splitAt(profileIndex)
-            val droppedLines =
-              after.drop(1).takeWhile(line => !line.startsWith("["))
-            val tempLines = List(
-              s"start: ${java.time.LocalDate.now().plusDays(30)}",
-              s"[$profileName]"
-            ) ++ droppedLines ++ List(
-              s"end: ${java.time.LocalDate.now().plusDays(30)}"
+      } *>
+        ZIO.whenZIO(
+          ZIO.succeed(
+            profileNames.length == 1 && profileNames(0) == profileName
+          )
+        ) {
+          ZIO.fail(
+            new IllegalStateException(
+              s"Profile '$profileName' can't be deleted, as it's the default"
             )
-            val newLines = before ++ after.drop(droppedLines.size + 1)
-            (tempLines, newLines)
-          }
-        }
-        .flatMap {
-          case Success((tempLines: List[String], newLines: List[String])) =>
-            appendToTempFile(tempLines) *> ZIO.attempt {
-              Using(new java.io.PrintWriter(fileLocation)) { writer =>
-                newLines.foreach(writer.println)
+          )
+        } *> ZIO
+          .attempt {
+            Using(scala.io.Source.fromFile(fileLocation)) { source =>
+              val lines = source.getLines().toList
+              val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
+              if (profileIndex == -1) {
+                throw new NoSuchElementException(
+                  s"Profile '$profileName' does not exist."
+                )
               }
+              val (before, after) = lines.splitAt(profileIndex)
+              val droppedLines =
+                after.drop(1).takeWhile(line => !line.startsWith("["))
+              val tempLines = List(
+                s"start: ${java.time.LocalDate.now().plusDays(30)}",
+                s"[$profileName]"
+              ) ++ droppedLines ++ List(
+                s"end: ${java.time.LocalDate.now().plusDays(30)}"
+              )
+              val newLines = before ++ after.drop(droppedLines.size + 1)
+              (tempLines, newLines)
             }
-          case Failure(exception) => ZIO.fail(exception)
-        }
+          }
+          .flatMap {
+            case Success((tempLines: List[String], newLines: List[String])) =>
+              appendToTempFile(tempLines) *> ZIO.attempt {
+                Using(new java.io.PrintWriter(fileLocation)) { writer =>
+                  newLines.foreach(writer.println)
+                }
+              }
+            case Failure(exception) => ZIO.fail(exception)
+          }
     }
   }
 }
