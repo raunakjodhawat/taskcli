@@ -10,7 +10,7 @@ class Todo(manager: TodoManager) {
       profileName: Option[String],
       date: Option[LocalDate]
   ): ZIO[Any, Throwable, Any] = manager
-    .getTodo(profileName, date)
+    .getTaskWithDateAndProfileName(profileName, date)
     .flatMap(todos => ZIO.succeed(todos.foreach(x => printLine(x))))
     .catchAll(e => printLine(e.getMessage))
 }
