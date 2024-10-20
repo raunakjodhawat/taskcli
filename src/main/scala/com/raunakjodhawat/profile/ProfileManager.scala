@@ -1,10 +1,6 @@
 package com.raunakjodhawat.profile
 
-import com.raunakjodhawat.filehandling.FileManager.fileLocation
-import com.raunakjodhawat.filehandling.FileManagerConfig.{
-  appendToTempFile,
-  createFileIfDoesNotExist
-}
+import com.raunakjodhawat.filehandling.FileManager
 import zio.stream.{ZPipeline, ZStream}
 import zio.{Chunk, ZIO}
 
@@ -12,8 +8,10 @@ import java.io.File
 import scala.util.{Failure, Success, Using}
 
 object ProfileManager {
+  val fileManagerConfig = new FileManager(fileLocation)
+  val tempFileManagerConfig = new FileManager(tempFileLocation)
   def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
-    createFileIfDoesNotExist *>
+    fileManagerConfig.createIfDoesNotExist *>
       ZStream
         .fromFile(new File(fileLocation))
         .via(ZPipeline.utf8Decode)
@@ -113,7 +111,7 @@ object ProfileManager {
           }
           .flatMap {
             case Success((tempLines: List[String], newLines: List[String])) =>
-              appendToTempFile(tempLines) *> ZIO.attempt {
+              tempFileManagerConfig.appendToFile(tempLines) *> ZIO.attempt {
                 Using(new java.io.PrintWriter(fileLocation)) { writer =>
                   newLines.foreach(writer.println)
                 }

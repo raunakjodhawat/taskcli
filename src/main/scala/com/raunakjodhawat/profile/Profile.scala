@@ -1,6 +1,5 @@
 package com.raunakjodhawat.profile
 
-import com.raunakjodhawat.filehandling.FileManager
 import com.raunakjodhawat.utils.Subcommand
 import zio.Console.printLine
 import zio.ZIO
