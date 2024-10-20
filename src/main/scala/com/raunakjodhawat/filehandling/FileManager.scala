@@ -7,7 +7,7 @@ import scala.util.Using
 
 class FileManager(fileLocation: String) {
 
-  private val fileZio = ZIO.attempt(new File(fileLocation))
+  val fileZio = ZIO.attempt(new File(fileLocation))
 
   /** Checks if the file at the specified location exists.
     *

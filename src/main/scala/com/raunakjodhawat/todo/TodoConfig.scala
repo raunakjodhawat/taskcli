@@ -6,8 +6,11 @@ import zio.cli.{Args, Options}
 import java.time.LocalDate
 
 object TodoConfig {
-  final case class Create(todo: List[String], date: LocalDate)
-      extends Subcommand
+  final case class Create(
+      profileName: Option[String],
+      todo: List[String],
+      date: Option[LocalDate]
+  ) extends Subcommand
   final case class Get(profileName: Option[String], date: Option[LocalDate])
       extends Subcommand
   final case class Update(oldTodo: String, newTodo: String) extends Subcommand

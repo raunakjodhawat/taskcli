@@ -2,6 +2,11 @@ package com.raunakjodhawat.profile
 
 import com.raunakjodhawat.filehandling.FileManager
 import com.raunakjodhawat.filehandling.FileManagerConfig.fileLocation
+import com.raunakjodhawat.profile.ProfileException.{
+  ProfileAlreadyExistsException,
+  ProfileDefaultDeleteException,
+  ProfileDoesNotExistException
+}
 import zio.stream.{ZPipeline, ZStream}
 import zio.{Chunk, ZIO}
 
@@ -13,7 +18,7 @@ class ProfileManager(
     tempConfig: FileManager
 ) {
 
-  private def createDefaultProfile: ZIO[Any, Throwable, Unit] =
+  def createDefaultProfile: ZIO[Any, Throwable, Unit] =
     fConfig.fileExists.flatMap {
       case true => ZIO.unit
       case false =>
@@ -34,9 +39,7 @@ class ProfileManager(
       .flatMap(profileNames => {
         ZIO.when(profileNames.contains(profileName)) {
           ZIO.fail(
-            new IllegalArgumentException(
-              s"Profile '$profileName' already exists."
-            )
+            new ProfileAlreadyExistsException(profileName)
           )
         } *> fConfig.appendToFile(List[String](s"[$profileName]"))
       })
@@ -48,11 +51,11 @@ class ProfileManager(
       ZIO.cond(
         profileNames.contains(oldName),
         (),
-        new NoSuchElementException(s"Profile '$oldName' does not exist.")
+        new ProfileDoesNotExistException(oldName)
       ) *> ZIO.cond(
         !profileNames.contains(newName),
         (),
-        new IllegalArgumentException(s"Profile '$newName' already exists.")
+        new ProfileAlreadyExistsException(newName)
       ) *> fConfig.updateFile(s"[$oldName]", s"[$newName]")
     }
 
@@ -60,9 +63,7 @@ class ProfileManager(
     getAllProfileNames.flatMap { profileNames =>
       ZIO.whenZIO(ZIO.succeed(!profileNames.contains(profileName))) {
         ZIO.fail(
-          new NoSuchElementException(
-            s"Profile '$profileName' does not exist"
-          )
+          new ProfileDoesNotExistException(profileName)
         )
       } *>
         ZIO.whenZIO(
@@ -71,9 +72,7 @@ class ProfileManager(
           )
         ) {
           ZIO.fail(
-            new IllegalStateException(
-              s"Profile '$profileName' can't be deleted, as it's the default"
-            )
+            new ProfileDefaultDeleteException(profileName)
           )
         } *> ZIO
           .attempt {
@@ -81,9 +80,7 @@ class ProfileManager(
               val lines = source.getLines().toList
               val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
               if (profileIndex == -1) {
-                throw new NoSuchElementException(
-                  s"Profile '$profileName' does not exist."
-                )
+                throw new ProfileDoesNotExistException(profileName)
               }
               val (before, after) = lines.splitAt(profileIndex)
               val droppedLines =

@@ -13,6 +13,8 @@ import com.raunakjodhawat.utils.Subcommand
 import zio.cli.HelpDoc.Span.text
 import zio.cli._
 
+import java.time.LocalDate
+
 object Config {
   private val fileManager = new FileManager(FileManagerConfig.fileLocation)
   private val tempFileManager = new FileManager(
@@ -20,7 +22,8 @@ object Config {
   )
   private val profileManager = new ProfileManager(fileManager, tempFileManager)
   val profile = new Profile(profileManager)
-  private val todoManager = new TodoManager(fileManager, tempFileManager)
+  private val todoManager =
+    new TodoManager(fileManager, tempFileManager, profileManager)
   val todo = new Todo(todoManager)
 }
 object Main extends ZIOCliDefault {
@@ -45,5 +48,7 @@ object Main extends ZIOCliDefault {
       Config.profile.update(oldName, newName).orDie
     case TodoConfig.Get(profileName, date) =>
       Config.todo.get(profileName, date).orDie
+    case TodoConfig.Create(profileName, todo, date: Option[LocalDate]) =>
+      Config.todo.create(profileName, date, todo).orDie
   }
 }

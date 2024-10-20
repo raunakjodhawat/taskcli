@@ -198,7 +198,7 @@ object E2ESpec extends JUnitRunnableSpec {
         } yield assert(output)(
           equalTo(
             Vector(
-              "Profile 'profile2' does not exist\n"
+              "Profile 'profile2' already exists\n"
             )
           )
         )
@@ -235,46 +235,45 @@ object E2ESpec extends JUnitRunnableSpec {
           _ <- Main.cliApp.run(List[String]("get", "-t"))
           output <- TestConsole.output
         } yield assert(output.length)(equalTo(0))
+      },
+      test("create a todo for default profile") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String](
+              "create",
+              "push great code",
+              "-d",
+              "2021-10-10"
+            )
+          )
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(Vector("Task created successfully\n"))
+        )
+      },
+      test("creating another todo for default profile") {
+        for {
+          _ <- Main.cliApp.run(
+            List[String](
+              "create",
+              "--name",
+              "default",
+              "--todo",
+              "this is the second task",
+              "-d",
+              "2021-10-10"
+            )
+          )
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(
+            Vector(
+              "Task created successfully\n"
+            )
+          )
+        )
+
       }
-//      test("create a todo") {
-//        for {
-//          _ <- Main.cliApp.run(
-//            List[String](
-//              "create",
-//              "-t",
-//              "--todo",
-//              "todo1",
-//              "--date",
-//              "2021-10-10"
-//            )
-//          )
-//          output <- TestConsole.output
-//        } yield assert(output)(
-//          equalTo(Vector("Todo 'todo1' created successfully\n"))
-//        )
-//      },
-//      test("creating todo with existing name") {
-//        for {
-//          _ <- Main.cliApp.run(
-//            List[String](
-//              "create",
-//              "-t",
-//              "--todo",
-//              "todo1",
-//              "--date",
-//              "2021-10-10"
-//            )
-//          )
-//          output <- TestConsole.output
-//        } yield assert(output)(
-//          equalTo(
-//            Vector(
-//              "Todo 'todo1' already exists\n"
-//            )
-//          )
-//        )
-//
-//      },
 //      test("deleting a todo") {
 //        for {
 //          _ <- Main.cliApp.run(
@@ -331,6 +330,7 @@ object E2ESpec extends JUnitRunnableSpec {
 //      }
     )
   override def spec: Spec[TestEnvironment with Scope, Any] = suite("E2E tests")(
+    profileTests,
     todoTests
   ).provideSomeLayer[TestEnvironment with Scope](
     testArgsLayer
