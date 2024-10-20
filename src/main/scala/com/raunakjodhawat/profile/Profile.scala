@@ -5,13 +5,10 @@ import zio.ZIO
 
 class Profile(manager: ProfileManager) {
 
-  def get: ZIO[Any, Throwable, Any] = manager.getAllProfileNames
-    .flatMap(profiles => {
-      ZIO.ifZIO(ZIO.succeed(profiles.isEmpty))(
-        printLine("Warning! No profiles found"),
-        printLine(profiles.mkString("\n"))
-      )
-    })
+  def get: ZIO[Any, Throwable, Any] = manager.getAllProfileNames.flatMap {
+    profiles =>
+      ZIO.unless(profiles.isEmpty)(printLine(profiles.mkString("\n")))
+  }
 
   def create(name: String): ZIO[Any, Throwable, Any] = manager
     .createProfile(name)
