@@ -11,14 +11,12 @@ import zio.{Chunk, ZIO}
 import java.io.File
 import java.time.LocalDate
 
-object TodoManager {
-  private val fileManagerConfig = new FileManager(fileLocation)
-  private val tempFileManagerConfig = new FileManager(tempFileLocation)
+class TodoManager(fConfig: FileManager, tempConfig: FileManager) {
   def getTodo(
       profileName: Option[String],
       date: Option[LocalDate]
   ): ZIO[Any, Throwable, Chunk[String]] = {
-    fileManagerConfig.createIfDoesNotExist *>
+    fConfig.createIfDoesNotExist *>
       ZStream
         .fromFile(new File(fileLocation))
         .via(ZPipeline.utf8Decode)
