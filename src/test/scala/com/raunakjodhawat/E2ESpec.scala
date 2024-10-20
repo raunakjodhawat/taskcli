@@ -1,6 +1,6 @@
 package com.raunakjodhawat
 
-import com.raunakjodhawat.filehandling.FileManager
+import com.raunakjodhawat.filehandling.{FileManager, FileManagerConfig}
 import zio.{Chunk, Scope, ULayer, ZIO, ZIOAppArgs, ZLayer}
 import zio.test.Assertion.equalTo
 import zio.test.TestAspect.{beforeAll, sequential}
