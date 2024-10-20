@@ -13,7 +13,7 @@ class FileManager(fileLocation: String) {
     *
     * @return A `ZIO` effect that, when executed, will return `true` if the file exists, `false` otherwise.
     */
-  private def fileExists: ZIO[Any, Throwable, Boolean] =
+  def fileExists: ZIO[Any, Throwable, Boolean] =
     fileZio.flatMap(f => ZIO.succeed(f.exists()))
 
   /** Creates a new file at the specified location.

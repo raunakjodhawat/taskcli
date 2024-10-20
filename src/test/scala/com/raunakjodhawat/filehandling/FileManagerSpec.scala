@@ -20,8 +20,9 @@ object FileManagerSpec extends JUnitRunnableSpec {
   override def spec: Spec[TestEnvironment with Scope, Throwable] =
     suite("File Manager Spec")(
       test("File does not exists") {
-        val file = new File(fileLocation)
-        assert(file.exists())(equalTo(false))
+        fileManager.fileExists.flatMap(exists =>
+          ZIO.succeed(assert(exists)(equalTo(false)))
+        )
       },
       test("Create file") {
         fileManager.createIfDoesNotExist *> ZIO

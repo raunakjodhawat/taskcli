@@ -1,6 +1,6 @@
 package com.raunakjodhawat.utils
 
-import com.raunakjodhawat.profile.Profile
+import com.raunakjodhawat.profile.ProfileConfig
 import com.raunakjodhawat.todo.Todo
 import zio.cli.{Command, Options}
 
@@ -22,34 +22,34 @@ object Utils {
   val createCommand: Command[Subcommand] = Command(
     name = "create",
     options =
-      Profile.isProfileTaskOption ++ Profile.nameOption ++ Todo.dateOption,
+      ProfileConfig.isProfileTaskOption ++ ProfileConfig.nameOption ++ Todo.dateOption,
     args = Todo.todo
   ).map { case ((isProfileTask: Boolean, name, date), todo) =>
-    if (isProfileTask) Profile.Create(name)
+    if (isProfileTask) ProfileConfig.Create(name)
     else Todo.Create(todo, date)
   }
 
   val getCommand: Command[Subcommand] = Command(
     name = "get",
-    options = Profile.isProfileTaskOption ++ Todo.dateOption
+    options = ProfileConfig.isProfileTaskOption ++ Todo.dateOption
   ).map { case (isProfileTask, date) =>
-    if (isProfileTask) Profile.Get()
+    if (isProfileTask) ProfileConfig.Get()
     else Todo.Get(Some(date))
   }
 
   val updateCommand: Command[Subcommand] = Command(
     name = "update",
-    options = Profile.isProfileTaskOption ++ oldOption ++ newOption
+    options = ProfileConfig.isProfileTaskOption ++ oldOption ++ newOption
   ).map { case (isProfileTask, oldValue, newValue) =>
-    if (isProfileTask) Profile.Update(oldValue, newValue)
+    if (isProfileTask) ProfileConfig.Update(oldValue, newValue)
     else Todo.Update(oldValue, newValue)
   }
 
   val deleteCommand: Command[Subcommand] = Command(
     name = "delete",
-    options = Profile.isProfileTaskOption ++ Profile.nameOption
+    options = ProfileConfig.isProfileTaskOption ++ ProfileConfig.nameOption
   ).map { case (isProfileTask, value) =>
-    if (isProfileTask) Profile.Delete(value)
+    if (isProfileTask) ProfileConfig.Delete(value)
     else Todo.Delete(value)
   }
 

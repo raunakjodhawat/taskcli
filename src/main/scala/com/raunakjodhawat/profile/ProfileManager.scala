@@ -1,10 +1,7 @@
 package com.raunakjodhawat.profile
 
 import com.raunakjodhawat.filehandling.FileManager
-import com.raunakjodhawat.filehandling.FileManagerConfig.{
-  fileLocation,
-  tempFileLocation
-}
+import com.raunakjodhawat.filehandling.FileManagerConfig.fileLocation
 import zio.stream.{ZPipeline, ZStream}
 import zio.{Chunk, ZIO}
 
@@ -16,8 +13,15 @@ class ProfileManager(
     tempConfig: FileManager
 ) {
 
+  private def createDefaultProfile: ZIO[Any, Throwable, Unit] =
+    fConfig.fileExists.flatMap {
+      case true => ZIO.unit
+      case false =>
+        fConfig.createIfDoesNotExist *>
+          fConfig.appendToFile(List("[default]"))
+    }
   def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
-    fConfig.createIfDoesNotExist *>
+    createDefaultProfile *> fConfig.createIfDoesNotExist *>
       ZStream
         .fromFile(new File(fileLocation))
         .via(ZPipeline.utf8Decode)
