@@ -1,98 +1,52 @@
 package com.raunakjodhawat.filehandling
 
-import zio._
-import java.time.LocalDate
+import zio.ZIO
+
+import java.io.{File, PrintWriter}
 import scala.util.Using
 
-object FileManager {
+class FileManager(fileLocation: String) {
 
-  /** file format
-    * [profileName]
-    * todo1, date1
-    * todo2, date2
+  private val fileZio = ZIO.attempt(new File(fileLocation))
+
+  /** Checks if the file at the specified location exists.
+    *
+    * @return A `ZIO` effect that, when executed, will return `true` if the file exists, `false` otherwise.
     */
-  val fileLocation: String = FileManagerConfig.fileLocation
-  val tempFileLocation: String = FileManagerConfig.tempFileLocation
+  def fileExists: ZIO[Any, Throwable, Boolean] =
+    fileZio.flatMap(f => ZIO.succeed(f.exists()))
 
-  def getAllTodosForAProfile(
-      profileName: String
-  ): ZIO[Any, Throwable, List[(String, String)]] = {
+  /** Creates a new file at the specified location.
+    *
+    * @return A `ZIO` effect that, when executed, will return `true` if the file was created successfully, `false` otherwise.
+    */
+  private def create: ZIO[Any, Throwable, Boolean] =
+    fileZio
+      .flatMap(f => ZIO.succeed(f.createNewFile()))
+
+  /** Deletes the file at the specified location.
+    *
+    * @return A `ZIO` effect that, when executed, will return `true` if the file was deleted successfully, `false` otherwise.
+    */
+  def deleteFile: ZIO[Any, Throwable, Boolean] =
+    fileZio.flatMap(f => ZIO.attempt(f.delete()))
+
+  /** Appends the specified content to the file at the specified location.
+    *
+    * @param content: List[String] - The content to append to the file.
+    * @return
+    */
+  def appendToFile(content: List[String]): ZIO[Any, Throwable, Unit] =
     ZIO.attempt {
-      Using(scala.io.Source.fromFile(fileLocation)) { source =>
-        val lines = source.getLines().toList
-        val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
-        if (profileIndex == -1) List.empty
-        else {
-          lines
-            .drop(profileIndex + 1)
-            .takeWhile(line => !line.startsWith("["))
-            .map { line =>
-              val Array(todo, date) = line.split(",").map(_.trim)
-              (todo, date)
-            }
-        }
-      }.getOrElse(List.empty)
+      Using(new PrintWriter(fileLocation)) { writer =>
+        content.foreach(writer.println)
+      }
     }
-  }
 
-  def createTodoForAProfile(
-      profileName: String,
-      todo: List[String],
-      date: LocalDate
-  ): ZIO[Any, Throwable, Unit] = {
-    for {
-      todos <- getAllTodosForAProfile(profileName)
-      newTodo = s"$todo, $date"
-      allLines <- ZIO.attempt {
-        Using(scala.io.Source.fromFile(fileLocation)) { source =>
-          source.getLines().toList
-        }.getOrElse(List.empty)
-      }
-      profileIndex = allLines.indexWhere(_.trim == s"[$profileName]")
-      _ <-
-        if (profileIndex == -1)
-          ZIO.fail(
-            new NoSuchElementException(
-              s"Profile '$profileName' does not exist."
-            )
-          )
-        else ZIO.unit
-      newLines = {
-        val (before, after) = allLines.splitAt(profileIndex + 1)
-        before ++ newTodo.split("\n").toList ++ after.dropWhile(line =>
-          !line.startsWith("[")
-        )
-      }
-      _ <- ZIO.attempt {
-        Using(new java.io.PrintWriter(fileLocation)) { writer =>
-          newLines.foreach(writer.println)
-        }
-      }
-    } yield ()
-  }
-
-  def getAllTodos: ZIO[Any, Throwable, List[(String, String)]] = {
-    ZIO.attempt {
-      Using(scala.io.Source.fromFile(fileLocation)) { source =>
-        val lines = source.getLines().toList
-        lines
-          .dropWhile(line => !line.startsWith("["))
-          .flatMap { line =>
-            lines
-              .dropWhile(_ != line)
-              .drop(1)
-              .takeWhile(line => !line.startsWith("["))
-              .map { line =>
-                val Array(todo, date) = line.split(",").map(_.trim)
-                (todo, date)
-              }
-          }
-      }.getOrElse(List.empty)
-    }
-  }
-
-  def getAllTodoForToday: ZIO[Any, Throwable, List[(String, String)]] = {
-    val today = java.time.LocalDate.now().toString
-    getAllTodos.map(_.filter { case (_, date) => date == today })
-  }
+  /** Creates a new file at the specified location if it does not already exist.
+    *
+    * @return A `ZIO` effect that, when executed, will create a new file if it does not already exist.
+    */
+  def createIfDoesNotExist: ZIO[Any, Throwable, Unit] =
+    fileExists.flatMap(exists => ZIO.when(!exists)(create)).unit
 }

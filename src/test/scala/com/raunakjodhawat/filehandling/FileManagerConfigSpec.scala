@@ -1,11 +1,10 @@
 package com.raunakjodhawat.filehandling
 
-import org.junit.runner.RunWith
 import zio.Scope
 import zio.test.Assertion.equalTo
 import zio.test._
-import zio.test.junit.{JUnitRunnableSpec, ZTestJUnitRunner}
-import zio.test.{Spec, TestEnvironment, ZIOSpecDefault}
+import zio.test.junit.JUnitRunnableSpec
+import zio.test.{Spec, TestEnvironment}
 
 object FileManagerConfigSpec extends JUnitRunnableSpec {
 

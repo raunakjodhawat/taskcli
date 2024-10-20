@@ -1,6 +1,8 @@
 package com.raunakjodhawat.todo
 
 import com.raunakjodhawat.utils.Subcommand
+import zio.Console.printLine
+import zio.ZIO
 import zio.cli.{Args, Options}
 
 import java.time.LocalDate
@@ -17,4 +19,14 @@ object Todo {
     .withDefault(LocalDate.now()) ?? "Date of the todo"
 
   val todo: Args[List[String]] = Args.text("todo").repeat ?? "todo task"
+
+  object Operations {
+    def get(
+        profileName: Option[String],
+        date: Option[LocalDate]
+    ): ZIO[Any, Throwable, Any] = TodoManager
+      .getTodo(profileName, date)
+      .flatMap(todos => ZIO.succeed(todos.foreach(x => printLine(x))))
+      .catchAll(e => printLine(e.getMessage))
+  }
 }
