@@ -20,7 +20,7 @@ class ProfileManager(
         fConfig.createIfDoesNotExist *>
           fConfig.appendToFile(List("[default]"))
     }
-  def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] = {
+  def getAllProfileNames: ZIO[Any, Throwable, Chunk[String]] =
     createDefaultProfile *> fConfig.createIfDoesNotExist *>
       ZStream
         .fromFile(new File(fileLocation))
@@ -29,8 +29,7 @@ class ProfileManager(
         .filter(x => x.startsWith("[") && x.endsWith("]"))
         .map(_.drop(1).dropRight(1))
         .runCollect
-  }
-  def createProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
+  def createProfile(profileName: String): ZIO[Any, Throwable, Unit] =
     getAllProfileNames
       .flatMap(profileNames => {
         ZIO.when(profileNames.contains(profileName)) {
@@ -39,44 +38,24 @@ class ProfileManager(
               s"Profile '$profileName' already exists."
             )
           )
-        } *> ZIO.attempt {
-          Using(
-            new java.io.PrintWriter(
-              new java.io.FileOutputStream(fileLocation, true)
-            )
-          ) { writer =>
-            writer.println(s"[$profileName]")
-          }
-        }
+        } *> fConfig.appendToFile(List[String](s"[$profileName]"))
       })
-  }
   def updateProfile(
       oldName: String,
       newName: String
-  ): ZIO[Any, Throwable, Unit] = {
-    getAllProfileNames.flatMap(profileNames => {
-      ZIO.when(!profileNames.contains(oldName)) {
-        ZIO.fail(
-          new NoSuchElementException(s"Profile '$oldName' does not exist.")
-        )
-      } *> ZIO.when(profileNames.contains(newName)) {
-        ZIO.fail(
-          new IllegalArgumentException(s"Profile '$newName' already exists.")
-        )
-      } *> ZIO.attempt {
-        Using(scala.io.Source.fromFile(fileLocation)) { source =>
-          val lines = source.getLines().toList
-          val newLines = lines.map { line =>
-            if (line == s"[$oldName]") s"[$newName]"
-            else line
-          }
-          Using(new java.io.PrintWriter(fileLocation)) { writer =>
-            newLines.foreach(writer.println)
-          }
-        }
-      }
-    })
-  }
+  ): ZIO[Any, Throwable, Unit] =
+    getAllProfileNames.flatMap { profileNames =>
+      ZIO.cond(
+        profileNames.contains(oldName),
+        (),
+        new NoSuchElementException(s"Profile '$oldName' does not exist.")
+      ) *> ZIO.cond(
+        !profileNames.contains(newName),
+        (),
+        new IllegalArgumentException(s"Profile '$newName' already exists.")
+      ) *> fConfig.updateFile(s"[$oldName]", s"[$newName]")
+    }
+
   def deleteProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
     getAllProfileNames.flatMap { profileNames =>
       ZIO.whenZIO(ZIO.succeed(!profileNames.contains(profileName))) {

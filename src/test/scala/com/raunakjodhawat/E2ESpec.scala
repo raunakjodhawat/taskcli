@@ -60,7 +60,6 @@ object E2ESpec extends JUnitRunnableSpec {
         } yield assert(output)(
           equalTo(Vector("Profile 'profile1' deleted successfully\n"))
         )
-        // todo: check if deleting adds the content to temp file
       },
       test("deleting the default profile") {
         for {
@@ -70,7 +69,9 @@ object E2ESpec extends JUnitRunnableSpec {
           output <- TestConsole.output
         } yield assert(output)(
           equalTo(
-            Vector("Profile 'default' can't be deleted, as it's the default\n")
+            Vector(
+              "Profile 'default' can't be deleted, as it's the default\n"
+            )
           )
         )
         // todo: check if deleting adds the content to temp file

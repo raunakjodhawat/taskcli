@@ -38,8 +38,9 @@ class FileManager(fileLocation: String) {
     */
   def appendToFile(content: List[String]): ZIO[Any, Throwable, Unit] =
     ZIO.attempt {
-      Using(new PrintWriter(fileLocation)) { writer =>
-        content.foreach(writer.println)
+      Using(new PrintWriter(new java.io.FileWriter(fileLocation, true))) {
+        writer =>
+          content.foreach(writer.println)
       }
     }
 
@@ -49,4 +50,20 @@ class FileManager(fileLocation: String) {
     */
   def createIfDoesNotExist: ZIO[Any, Throwable, Unit] =
     fileExists.flatMap(exists => ZIO.when(!exists)(create)).unit
+
+  def updateFile(
+      oldContent: String,
+      newContent: String
+  ): ZIO[Any, Throwable, Unit] = ZIO.attempt {
+    Using(scala.io.Source.fromFile(fileLocation)) { source =>
+      val lines = source.getLines().toList
+      val updatedLines = lines.map {
+        case line if line == oldContent => newContent
+        case line                       => line
+      }
+      Using(new PrintWriter(fileLocation)) { writer =>
+        updatedLines.foreach(writer.println)
+      }
+    }
+  }
 }
