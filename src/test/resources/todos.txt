@@ -1,2 +1,2 @@
+[default]
 [profile1]
-[profile2]

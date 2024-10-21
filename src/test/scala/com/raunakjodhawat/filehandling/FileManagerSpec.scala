@@ -43,6 +43,23 @@ object FileManagerSpec extends JUnitRunnableSpec {
             }
           )
       },
+      test("update the file") {
+        val oldContent = "Hello"
+        val newContent = "Hi"
+        fileManager.updateFile(oldContent, newContent) *> ZIO
+          .attempt(Using(scala.io.Source.fromFile(fileLocation)) { source =>
+            source.getLines().toList
+          })
+          .flatMap(mayBeFileContent =>
+            mayBeFileContent match {
+              case Success(fileContent) =>
+                ZIO.succeed(
+                  assert(fileContent)(equalTo(List(newContent, "World")))
+                )
+              case _ => ZIO.fail(new Exception("File not found"))
+            }
+          )
+      },
       test("Delete file") {
         fileManager.deleteFile *> ZIO
           .attempt(new File(fileLocation))
