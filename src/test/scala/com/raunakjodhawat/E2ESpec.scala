@@ -334,5 +334,5 @@ object E2ESpec extends JUnitRunnableSpec {
     todoTests
   ).provideSomeLayer[TestEnvironment with Scope](
     testArgsLayer
-  ) @@ beforeAll(beforeHook)
+  ) @@ sequential @@ beforeAll(beforeHook)
 }
