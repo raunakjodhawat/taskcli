@@ -44,6 +44,10 @@ class FileManager(fileLocation: String) {
       }
     }
 
+  def updateFileContent(content: List[String]): ZIO[Any, Throwable, Unit] = {
+    deleteFile *> create *> appendToFile(content)
+  }
+
   /** Creates a new file at the specified location if it does not already exist.
     *
     * @return A `ZIO` effect that, when executed, will create a new file if it does not already exist.

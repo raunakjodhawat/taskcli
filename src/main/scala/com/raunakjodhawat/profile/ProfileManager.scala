@@ -54,20 +54,25 @@ class ProfileManager(
   }
 
   def deleteProfile(profileName: String): ZIO[Any, Throwable, Unit] = {
-    def updateLines(lines: List[String]): List[String] = {
+    def updateLines(lines: List[String]): (List[String], List[String]) = {
       val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
       val (before, after) = lines.splitAt(profileIndex)
       val droppedLines = after.drop(1).takeWhile(line => !line.startsWith("["))
-      before ++ after.drop(droppedLines.size + 1)
+      (before ++ after.drop(droppedLines.size + 1), droppedLines)
     }
-    fConfig.initialFileSetup *> getAllProfileNames.flatMap(profileNames =>
-      if (profileNames.length == 1) {
-        ZIO.fail(new ProfileDefaultDeleteException(profileName))
-      } else if (!profileNames.contains(profileName)) {
+    getAllProfileNames.flatMap(profileNames =>
+      if (!profileNames.contains(profileName)) {
         ZIO.fail(new ProfileDoesNotExistException(profileName))
+      } else if (profileNames.length == 1) {
+        ZIO.fail(new ProfileDefaultDeleteException(profileName))
       } else {
         fConfig.getFileContent.flatMap(lines => {
-          tempConfig.appendToFile(updateLines(lines))
+
+          val (newLines: List[String], droppedLines: List[String]) =
+            updateLines(lines)
+          fConfig
+            .updateFileContent(newLines)
+            .zipPar(tempConfig.appendToFile(droppedLines))
         })
       }
     )
