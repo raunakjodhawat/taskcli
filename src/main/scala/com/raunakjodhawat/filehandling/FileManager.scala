@@ -3,7 +3,7 @@ package com.raunakjodhawat.filehandling
 import zio.ZIO
 
 import java.io.{File, PrintWriter}
-import scala.util.Using
+import scala.util.{Failure, Success, Using}
 
 class FileManager(fileLocation: String) {
 
@@ -38,10 +38,15 @@ class FileManager(fileLocation: String) {
     */
   def appendToFile(content: List[String]): ZIO[Any, Throwable, Unit] =
     ZIO.attempt {
-      Using(new PrintWriter(fileLocation)) { writer =>
-        content.foreach(writer.println)
+      Using(new PrintWriter(new java.io.FileWriter(fileLocation, true))) {
+        writer =>
+          content.foreach(writer.println)
       }
     }
+
+  def updateFileContent(content: List[String]): ZIO[Any, Throwable, Unit] = {
+    deleteFile *> create *> appendToFile(content)
+  }
 
   /** Creates a new file at the specified location if it does not already exist.
     *
@@ -49,4 +54,46 @@ class FileManager(fileLocation: String) {
     */
   def createIfDoesNotExist: ZIO[Any, Throwable, Unit] =
     fileExists.flatMap(exists => ZIO.when(!exists)(create)).unit
+
+  /** Updates the file with the new content.
+    * OldContent must match the exact line in the file.
+    * @param oldContent: String
+    * @param newContent: String
+    * @return ZIO[Any, Throwable, Unit]
+    */
+  def updateFile(
+      oldContent: String,
+      newContent: String
+  ): ZIO[Any, Throwable, Unit] = ZIO.attempt {
+    Using(scala.io.Source.fromFile(fileLocation)) { source =>
+      val lines = source.getLines().toList
+      val updatedLines = lines.map {
+        case line if line == oldContent => newContent
+        case line                       => line
+      }
+      Using(new PrintWriter(fileLocation)) { writer =>
+        updatedLines.foreach(writer.println)
+      }
+    }
+  }
+
+  def initialFileSetup() = fileExists
+    .flatMap(exists =>
+      ZIO.when(!exists)(create *> appendToFile(List[String]("[default]")))
+    )
+    .unit
+
+  def getFileContent: ZIO[Any, Throwable, List[String]] = ZIO
+    .attempt {
+      Using(scala.io.Source.fromFile(fileLocation)) { source =>
+        source.getLines().toList
+      }
+    }
+    .foldZIO(
+      _ => ZIO.fail(new Exception("Error reading file")),
+      {
+        case Success(value)     => ZIO.succeed(value)
+        case Failure(exception) => ZIO.fail(exception)
+      }
+    )
 }
