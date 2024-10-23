@@ -1,6 +1,7 @@
 package com.raunakjodhawat.todo
 
 import com.raunakjodhawat.filehandling.FileManager
+import com.raunakjodhawat.profile.ProfileException.ProfileDoesNotExistException
 import com.raunakjodhawat.profile.ProfileManager
 import zio.ZIO
 
@@ -11,71 +12,68 @@ class TodoManager(
     tempConfig: FileManager,
     profileManager: ProfileManager
 ) {
-  private def getDate: Option[LocalDate] => LocalDate =
-    _.getOrElse(LocalDate.now())
+  private def getDate: Option[LocalDate] => ZIO[Any, Throwable, LocalDate] =
+    ZIO.fromOption(_).orElse(ZIO.succeed(LocalDate.now()))
 
   private def getProfileName: Option[String] => ZIO[Any, Throwable, String] = {
-    case Some(profileName) => ZIO.succeed(profileName)
+    case Some(profileName) =>
+      profileManager.getAllProfileNames.flatMap { profileNames =>
+        if (profileNames.contains(profileName)) ZIO.succeed(profileName)
+        else ZIO.fail(new ProfileDoesNotExistException(profileName))
+      }
     case None =>
-      fConfig.getFileContent
-        .flatMap(lines => {
-          val defaultProfile = lines
-            .find(x => x.startsWith("[") && x.endsWith("]"))
-            .map(_.drop(1).dropRight(1))
-          defaultProfile match {
-            case Some(profile) => ZIO.succeed(profile)
-            case None =>
-              ZIO.fail(new NoSuchElementException("No default profile found"))
-          }
-        })
+      profileManager.getAllProfileNames.flatMap { profileNames =>
+        if (profileNames.nonEmpty) ZIO.succeed(profileNames.head)
+        else fConfig.initialFileSetup() *> ZIO.succeed("[default]")
+      }
   }
 
   def getTaskWithDateAndProfileName(
       optionalProfileName: Option[String],
       optionalDate: Option[LocalDate]
-  ): ZIO[Any, Throwable, List[String]] = {
-    val date: LocalDate = getDate(optionalDate)
-    getProfileName(optionalProfileName).flatMap { profileName =>
-      fConfig.createIfDoesNotExist *>
-        fConfig.getFileContent.flatMap(lines => {
-          val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
-          val (_, after) = lines.splitAt(profileIndex)
-          val droppedLines =
-            after.drop(1).takeWhile(line => !line.startsWith("["))
-          val todos = droppedLines
-            .filter(x => x.endsWith(date.toString))
-            .map(x => x.dropRight(date.toString.length + 2))
-          ZIO.succeed(todos)
-        })
-    }
+  ): ZIO[Any, Throwable, List[String]] = for {
+    date <- getDate(optionalDate)
+    profileName <- getProfileName(optionalProfileName)
+    lines <- fConfig.getFileContent
+  } yield {
+    val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
+    val (_, after) = lines.splitAt(profileIndex)
+    val droppedLines =
+      after.drop(1).takeWhile(line => !line.startsWith("["))
+    droppedLines
+      .filter(x => x.endsWith(date.toString))
+      .map(x => x.dropRight(date.toString.length + 2))
   }
 
   def createTodo(
       optionalProfileName: Option[String],
       optionalDate: Option[LocalDate],
       todo: List[String]
-  ): ZIO[Any, Throwable, Unit] = {
-    fConfig.createIfDoesNotExist *> (for {
-      profileName <- getProfileName(optionalProfileName)
-      date = getDate(optionalDate)
-      profileNames <- profileManager.getAllProfileNames
-      _ <- ZIO.when(profileNames.isEmpty)(
-        profileManager.createProfile(profileName)
-      )
-      profileNames <- profileManager.getAllProfileNames
-      _ <- ZIO.when(!profileNames.contains(profileName))(
-        profileManager.createProfile(profileName)
-      )
-      _ <- fConfig.getFileContent.flatMap(lines => {
-        val profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
-        val (before, after) = lines.splitAt(profileIndex)
-        val newTodoLine = todo.mkString(", ") + s", $date"
-        val updatedLines =
-          before ++ (after.headOption.toList ++ List(
-            newTodoLine
-          ) ++ after.tail)
-        fConfig.updateFileContent(updatedLines)
-      })
-    } yield ())
-  }
+  ): ZIO[Any, Throwable, Unit] = for {
+    date <- getDate(optionalDate)
+    profileName <- getProfileName(optionalProfileName).orElse {
+      ZIO
+        .fromOption(optionalProfileName)
+        .flatMap(name =>
+          fConfig.createIfDoesNotExist *> profileManager.createProfile(
+            name
+          ) *> ZIO.succeed(name)
+        )
+        .orElse(
+          ZIO.fail(
+            new IllegalArgumentException("Profile name does not exist")
+          )
+        )
+    }
+    lines <- fConfig.getFileContent
+    profileIndex = lines.indexWhere(_.trim == s"[$profileName]")
+    (before, after) = lines.splitAt(profileIndex)
+    newTodoLine = todo.mkString(", ") + s", $date"
+    updatedLines =
+      before ++ (after.headOption.toList ++ List(
+        newTodoLine
+      ) ++ after.tail)
+    _ <- fConfig.updateFileContent(updatedLines)
+  } yield ()
+
 }

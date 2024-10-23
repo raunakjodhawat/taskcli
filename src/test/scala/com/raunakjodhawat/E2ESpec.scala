@@ -226,15 +226,27 @@ object E2ESpec extends JUnitRunnableSpec {
           )
         )
       }
-    ) @@ sequential
+    ) @@ sequential @@ beforeAll(beforeHook)
 
   def todoTests: Spec[Any with ZIOAppArgs with Scope, Any] =
     suite("todo tests")(
-      test("Get all todos") {
+      test("Get all todos, without profile should be empty") {
         for {
-          _ <- Main.cliApp.run(List[String]("get", "-t"))
+          _ <- Main.cliApp.run(List[String]("get"))
           output <- TestConsole.output
         } yield assert(output.length)(equalTo(0))
+      },
+      test(
+        "Get a todo, for a non-existent profile should be empty and create that profile"
+      ) {
+        for {
+          _ <- Main.cliApp.run(
+            List[String]("get", "--name", "profile1")
+          )
+          output <- TestConsole.output
+        } yield assert(output)(
+          equalTo(Vector("Profile 'profile1' does not exist\n"))
+        )
       },
       test("create a todo for default profile") {
         for {
@@ -328,11 +340,11 @@ object E2ESpec extends JUnitRunnableSpec {
 //          )
 //        )
 //      }
-    )
+    ) @@ sequential @@ beforeAll(beforeHook)
   override def spec: Spec[TestEnvironment with Scope, Any] = suite("E2E tests")(
     profileTests,
     todoTests
   ).provideSomeLayer[TestEnvironment with Scope](
     testArgsLayer
-  ) @@ sequential @@ beforeAll(beforeHook)
+  ) @@ sequential
 }
