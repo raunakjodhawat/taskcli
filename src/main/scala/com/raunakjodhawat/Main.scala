@@ -48,7 +48,7 @@ object Main extends ZIOCliDefault {
       Config.profile.update(oldName, newName).orDie
     case TodoConfig.Get(profileName, date) =>
       Config.todo.get(profileName, date).orDie
-    case TodoConfig.Create(profileName, todo, date: Option[LocalDate]) =>
+    case TodoConfig.Create(profileName, todo, date) =>
       Config.todo.create(profileName, date, todo).orDie
   }
 }

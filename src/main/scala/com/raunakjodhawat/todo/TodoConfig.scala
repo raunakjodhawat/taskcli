@@ -7,12 +7,11 @@ import java.time.LocalDate
 
 object TodoConfig {
   final case class Create(
-      profileName: Option[String],
+      profileName: String,
       todo: List[String],
-      date: Option[LocalDate]
+      date: LocalDate
   ) extends Subcommand
-  final case class Get(profileName: Option[String], date: Option[LocalDate])
-      extends Subcommand
+  final case class Get(profileName: String, date: LocalDate) extends Subcommand
   final case class Update(oldTodo: String, newTodo: String) extends Subcommand
   final case class Delete(todo: String) extends Subcommand
 

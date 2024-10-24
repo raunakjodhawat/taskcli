@@ -7,16 +7,16 @@ import java.time.LocalDate
 class Todo(manager: TodoManager) {
 
   def get(
-      profileName: Option[String],
-      date: Option[LocalDate]
+      profileName: String,
+      date: LocalDate
   ): ZIO[Any, Throwable, Any] = manager
-    .getTaskWithDateAndProfileName(profileName, date)
+    .getTask(profileName, date)
     .flatMap(todos => ZIO.succeed(todos.foreach(x => printLine(x))))
     .catchAll(e => printLine(e.getMessage))
 
   def create(
-      profileName: Option[String],
-      date: Option[LocalDate],
+      profileName: String,
+      date: LocalDate,
       todo: List[String]
   ): ZIO[Any, Throwable, Any] = manager
     .createTodo(profileName, date, todo)

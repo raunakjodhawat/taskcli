@@ -26,7 +26,7 @@ object Utils {
     args = TodoConfig.todo
   ).map { case ((isProfileTask: Boolean, name, date), todo) =>
     if (isProfileTask) ProfileConfig.Create(name)
-    else TodoConfig.Create(Some(name), todo, Some(date))
+    else TodoConfig.Create(name, todo, date)
   }
 
   val getCommand: Command[Subcommand] = Command(
@@ -35,7 +35,10 @@ object Utils {
       ProfileConfig.isProfileTaskOption ++ TodoConfig.dateOption ++ ProfileConfig.nameOption
   ).map { case (isProfileTask, date, profileName) =>
     if (isProfileTask) ProfileConfig.Get()
-    else TodoConfig.Get(Some(profileName), Some(date))
+    else {
+      println("getting todo", profileName)
+      TodoConfig.Get(profileName, date)
+    }
   }
 
   val updateCommand: Command[Subcommand] = Command(
