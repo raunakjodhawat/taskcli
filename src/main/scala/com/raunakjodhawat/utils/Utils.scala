@@ -15,7 +15,7 @@ object Utils {
   val newOption: Options[String] =
     Options
       .text("new")
-      .alias("n")
+      .alias("nn")
       .withDefault(
         "default"
       ) ?? "new name of the profile or new todo description"

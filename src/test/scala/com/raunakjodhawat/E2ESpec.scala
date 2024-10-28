@@ -241,7 +241,7 @@ object E2ESpec extends JUnitRunnableSpec {
       ) {
         for {
           _ <- Main.cliApp.run(
-            List[String]("get", "-n", "profile1")
+            List[String]("get", "--name", "profile1")
           )
           output <- TestConsole.output
         } yield assert(output.length)(equalTo(0))

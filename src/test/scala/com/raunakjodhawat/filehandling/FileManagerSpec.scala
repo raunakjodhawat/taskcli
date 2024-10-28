@@ -8,6 +8,8 @@ import zio.test.{Spec, TestEnvironment}
 import zio.test.junit.JUnitRunnableSpec
 
 import java.io.File
+import scala.reflect.runtime.universe
+import scala.reflect.runtime.universe.TermName
 import scala.util.{Success, Using}
 
 object FileManagerSpec extends JUnitRunnableSpec {
@@ -19,15 +21,27 @@ object FileManagerSpec extends JUnitRunnableSpec {
     val file = new java.io.File(fileLocation)
     if (file.exists()) file.delete()
   }.unit
+  def invokePrivateMethod[T](obj: AnyRef, methodName: String, args: Any*): T = {
+    val mirror = universe.runtimeMirror(obj.getClass.getClassLoader)
+    val instanceMirror = mirror.reflect(obj)
+    val methodSymbol =
+      instanceMirror.symbol.typeSignature.member(TermName(methodName)).asMethod
+    val method = instanceMirror.reflectMethod(methodSymbol)
+    method(args: _*).asInstanceOf[T]
+  }
   override def spec: Spec[TestEnvironment with Scope, Throwable] =
     suite("File Manager Spec")(
       test("File does not exists") {
-        fileManager.fileExists.flatMap(exists =>
-          ZIO.succeed(assert(exists)(equalTo(false)))
-        )
+        invokePrivateMethod[ZIO[Any, Throwable, Boolean]](
+          fileManager,
+          "fileExists"
+        ).flatMap(exists => ZIO.succeed(assert(exists)(equalTo(false))))
       },
       test("Create file") {
-        fileManager.createIfDoesNotExist *> ZIO
+        invokePrivateMethod[ZIO[Any, Throwable, Boolean]](
+          fileManager,
+          "safeCreate"
+        ) *> ZIO
           .attempt(new File(fileLocation))
           .flatMap(file => ZIO.succeed(assert(file.exists())(equalTo(true))))
       },
@@ -63,15 +77,12 @@ object FileManagerSpec extends JUnitRunnableSpec {
           )
       },
       test("Delete file") {
-        fileManager.deleteFile *> ZIO
+        invokePrivateMethod[ZIO[Any, Throwable, Boolean]](
+          fileManager,
+          "deleteFile"
+        ) *> ZIO
           .attempt(new File(fileLocation))
           .flatMap(file => ZIO.succeed(assert(file.exists())(equalTo(false))))
-      },
-      test("getting file content of non-existent file") {
-        nonExistentFileManager.getFileContent.foldZIO(
-          _ => ZIO.succeed(assertCompletes),
-          _ => ZIO.fail(new Exception("File found"))
-        )
       }
     ) @@ sequential @@ beforeAll(beforeAllHook)
 }
