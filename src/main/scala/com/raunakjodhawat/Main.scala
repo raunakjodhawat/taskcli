@@ -1,20 +1,12 @@
 package com.raunakjodhawat
 
 import com.raunakjodhawat.filehandling.{FileManager, FileManagerConfig}
-import com.raunakjodhawat.utils.Utils.{
-  createCommand,
-  deleteCommand,
-  getCommand,
-  updateCommand
-}
 import com.raunakjodhawat.profile.{Profile, ProfileConfig, ProfileManager}
 import com.raunakjodhawat.todo.{Todo, TodoConfig, TodoManager}
-import com.raunakjodhawat.utils.Subcommand
+import com.raunakjodhawat.utils.{Subcommand, Utils}
 import zio.ZIO
 import zio.cli.HelpDoc.Span.text
 import zio.cli._
-
-import java.time.LocalDate
 
 object Config {
   private val fileManager = new FileManager(FileManagerConfig.fileLocation)
@@ -28,26 +20,6 @@ object Config {
   val todo = new Todo(todoManager)
 }
 object Main extends ZIOCliDefault {
-  private val task: Command[(Boolean, Subcommand)] =
-    Command("task", options = ProfileConfig.isProfileTaskOption, Args.none)
-      .subcommands(getCommand, createCommand, updateCommand, deleteCommand)
-
-  private def mapSubcommand(
-      isProfileTask: Boolean,
-      subcommand: Subcommand
-  ): Subcommand = {
-    (isProfileTask, subcommand) match {
-      case (true, ProfileConfig.Get())        => ProfileConfig.Get()
-      case (true, ProfileConfig.Create(name)) => ProfileConfig.Create(name)
-      case (true, ProfileConfig.Update(oldName, newName)) =>
-        ProfileConfig.Update(oldName, newName)
-      case (true, ProfileConfig.Delete(name))  => ProfileConfig.Delete(name)
-      case (false, TodoConfig.Get(name, date)) => TodoConfig.Get(name, date)
-      case (false, TodoConfig.Create(name, date, todo)) =>
-        TodoConfig.Create(name, date, todo)
-    }
-  }
-
   private def executeCommand(
       subcommand: Subcommand
   ): ZIO[Any, Nothing, Any] = {
@@ -63,9 +35,13 @@ object Main extends ZIOCliDefault {
     }
   }
 
-  private val taskCommand: Command[Subcommand] = task.map {
-    case (isProfileTask, subcommand) => mapSubcommand(isProfileTask, subcommand)
-  }
+  private val taskCommand: Command[Subcommand] =
+    Command("task", options = Utils.isProfileTaskOption, Args.none)
+      .subcommands(ProfileConfig.profileTask, TodoConfig.todoTask)
+      .map { case (isProfileTask, subcommand) =>
+        if (isProfileTask) subcommand.asInstanceOf[ProfileConfig.profileTask]
+        else subcommand.asInstanceOf[TodoConfig.Subcommand]
+      }
 
   val cliApp: CliApp[Any, Nothing, Subcommand] = CliApp.make(
     name = "Task CLI",

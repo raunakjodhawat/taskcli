@@ -1,7 +1,6 @@
 package com.raunakjodhawat.todo
 
 import com.raunakjodhawat.filehandling.FileManager
-import com.raunakjodhawat.profile.ProfileException.ProfileDoesNotExistException
 import com.raunakjodhawat.profile.ProfileManager
 import zio.ZIO
 
