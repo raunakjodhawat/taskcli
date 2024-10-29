@@ -9,35 +9,22 @@ class FileManager(fileLocation: String) {
 
   private val fileZio = ZIO.attempt(new File(fileLocation))
 
-  /** Checks if the file at the specified location exists.
-    *
-    * @return A `ZIO` effect that, when executed, will return `true` if the file exists, `false` otherwise.
-    */
-  def fileExists: ZIO[Any, Throwable, Boolean] =
-    fileZio.flatMap(f => ZIO.succeed(f.exists()))
+  private def fileExists: ZIO[Any, Throwable, Boolean] =
+    fileZio.flatMap(f => ZIO.attempt(f.exists()))
 
-  /** Creates a new file at the specified location.
-    *
-    * @return A `ZIO` effect that, when executed, will return `true` if the file was created successfully, `false` otherwise.
-    */
   private def create: ZIO[Any, Throwable, Boolean] =
-    fileZio
-      .flatMap(f => ZIO.succeed(f.createNewFile()))
+    fileZio.flatMap(f => ZIO.attempt(f.createNewFile()))
 
-  /** Deletes the file at the specified location.
-    *
-    * @return A `ZIO` effect that, when executed, will return `true` if the file was deleted successfully, `false` otherwise.
-    */
-  def deleteFile: ZIO[Any, Throwable, Boolean] =
+  private def safeCreate: ZIO[Any, Throwable, Boolean] = ZIO.ifZIO(fileExists)(
+    onTrue = ZIO.succeed(true),
+    onFalse = create
+  )
+
+  private def deleteFile: ZIO[Any, Throwable, Boolean] =
     fileZio.flatMap(f => ZIO.attempt(f.delete()))
 
-  /** Appends the specified content to the file at the specified location.
-    *
-    * @param content: List[String] - The content to append to the file.
-    * @return
-    */
   def appendToFile(content: List[String]): ZIO[Any, Throwable, Unit] =
-    ZIO.attempt {
+    safeCreate *> ZIO.attempt {
       Using(new PrintWriter(new java.io.FileWriter(fileLocation, true))) {
         writer =>
           content.foreach(writer.println)
@@ -45,26 +32,13 @@ class FileManager(fileLocation: String) {
     }
 
   def updateFileContent(content: List[String]): ZIO[Any, Throwable, Unit] = {
-    deleteFile *> create *> appendToFile(content)
+    deleteFile *> safeCreate *> appendToFile(content)
   }
 
-  /** Creates a new file at the specified location if it does not already exist.
-    *
-    * @return A `ZIO` effect that, when executed, will create a new file if it does not already exist.
-    */
-  def createIfDoesNotExist: ZIO[Any, Throwable, Unit] =
-    fileExists.flatMap(exists => ZIO.when(!exists)(create)).unit
-
-  /** Updates the file with the new content.
-    * OldContent must match the exact line in the file.
-    * @param oldContent: String
-    * @param newContent: String
-    * @return ZIO[Any, Throwable, Unit]
-    */
   def updateFile(
       oldContent: String,
       newContent: String
-  ): ZIO[Any, Throwable, Unit] = ZIO.attempt {
+  ): ZIO[Any, Throwable, Unit] = safeCreate *> ZIO.attempt {
     Using(scala.io.Source.fromFile(fileLocation)) { source =>
       val lines = source.getLines().toList
       val updatedLines = lines.map {
@@ -77,13 +51,7 @@ class FileManager(fileLocation: String) {
     }
   }
 
-  def initialFileSetup() = fileExists
-    .flatMap(exists =>
-      ZIO.when(!exists)(create *> appendToFile(List[String]("[default]")))
-    )
-    .unit
-
-  def getFileContent: ZIO[Any, Throwable, List[String]] = ZIO
+  def getFileContent: ZIO[Any, Throwable, List[String]] = safeCreate *> ZIO
     .attempt {
       Using(scala.io.Source.fromFile(fileLocation)) { source =>
         source.getLines().toList

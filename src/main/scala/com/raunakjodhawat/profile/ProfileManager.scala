@@ -12,27 +12,29 @@ class ProfileManager(
     fConfig: FileManager,
     tempConfig: FileManager
 ) {
-  private def doesProfileExists(
+
+  def getAllProfileNames: ZIO[Any, Throwable, List[String]] =
+    fConfig.getFileContent.foldZIO(
+      _ => ZIO.fail(new Exception("Unable to open file")),
+      lines => {
+        val profileNames = lines
+          .filter(x => x.startsWith("[") && x.endsWith("]"))
+          .map(_.drop(1).dropRight(1))
+        ZIO.succeed(profileNames)
+      }
+    )
+//  private def createDefaultProfile = {
+//    ZIO.ifZIO(getAllProfileNames.)
+//  }
+  def doesProfileExists(
       profileName: String
   ): ZIO[Any, Throwable, Boolean] =
     getAllProfileNames.flatMap(profileNames =>
       ZIO.succeed(profileNames.contains(profileName))
     )
 
-  def getAllProfileNames: ZIO[Any, Throwable, List[String]] =
-    fConfig.initialFileSetup *>
-      fConfig.getFileContent.foldZIO(
-        _ => ZIO.fail(new Exception("Unable to open file")),
-        lines => {
-          val profileNames = lines
-            .filter(x => x.startsWith("[") && x.endsWith("]"))
-            .map(_.drop(1).dropRight(1))
-          ZIO.succeed(profileNames)
-        }
-      )
-
   def createProfile(profileName: String): ZIO[Any, Throwable, Unit] =
-    fConfig.initialFileSetup *> ZIO.ifZIO(doesProfileExists(profileName))(
+    ZIO.ifZIO(doesProfileExists(profileName))(
       ZIO.fail(new ProfileAlreadyExistsException(profileName)),
       fConfig.appendToFile(List[String](s"[$profileName]"))
     )
@@ -41,7 +43,7 @@ class ProfileManager(
       oldName: String,
       newName: String
   ): ZIO[Any, Throwable, Unit] = {
-    fConfig.initialFileSetup *> doesProfileExists(oldName)
+    doesProfileExists(oldName)
       .zipPar(doesProfileExists(newName))
       .flatMap({
         case (true, false) =>

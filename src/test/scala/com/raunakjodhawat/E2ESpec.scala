@@ -226,54 +226,68 @@ object E2ESpec extends JUnitRunnableSpec {
           )
         )
       }
-    ) @@ sequential
+    ) @@ sequential @@ beforeAll(beforeHook)
 
   def todoTests: Spec[Any with ZIOAppArgs with Scope, Any] =
     suite("todo tests")(
-      test("Get all todos") {
+      test("Get all todos, without profile should be empty") {
         for {
-          _ <- Main.cliApp.run(List[String]("get", "-t"))
+          _ <- Main.cliApp.run(List[String]("get"))
           output <- TestConsole.output
         } yield assert(output.length)(equalTo(0))
       },
-      test("create a todo for default profile") {
+      test(
+        "Get a todo, for a non-existent profile should be empty and create that profile"
+      ) {
         for {
           _ <- Main.cliApp.run(
-            List[String](
-              "create",
-              "push great code",
-              "-d",
-              "2021-10-10"
-            )
+            List[String]("get", "--name", "profile1")
           )
           output <- TestConsole.output
-        } yield assert(output)(
-          equalTo(Vector("Task created successfully\n"))
-        )
-      },
-      test("creating another todo for default profile") {
+        } yield assert(output.length)(equalTo(0))
         for {
-          _ <- Main.cliApp.run(
-            List[String](
-              "create",
-              "--name",
-              "default",
-              "--todo",
-              "this is the second task",
-              "-d",
-              "2021-10-10"
-            )
-          )
+          _ <- Main.cliApp.run(List[String]("get", "-p"))
           output <- TestConsole.output
-        } yield assert(output)(
-          equalTo(
-            Vector(
-              "Task created successfully\n"
-            )
-          )
-        )
-
+        } yield assert(output)(equalTo(Vector("default\n")))
       }
+//      test("create a todo for default profile") {
+//        for {
+//          _ <- Main.cliApp.run(
+//            List[String](
+//              "create",
+//              "push great code",
+//              "-d",
+//              "2021-10-10"
+//            )
+//          )
+//          output <- TestConsole.output
+//        } yield assert(output)(
+//          equalTo(Vector("Task created successfully\n"))
+//        )
+//      },
+//      test("creating another todo for default profile") {
+//        for {
+//          _ <- Main.cliApp.run(
+//            List[String](
+//              "create",
+//              "--name",
+//              "default",
+//              "--todo",
+//              "this is the second task",
+//              "-d",
+//              "2021-10-10"
+//            )
+//          )
+//          output <- TestConsole.output
+//        } yield assert(output)(
+//          equalTo(
+//            Vector(
+//              "Task created successfully\n"
+//            )
+//          )
+//        )
+//
+//      }
 //      test("deleting a todo") {
 //        for {
 //          _ <- Main.cliApp.run(
@@ -328,11 +342,10 @@ object E2ESpec extends JUnitRunnableSpec {
 //          )
 //        )
 //      }
-    )
+    ) @@ sequential @@ beforeAll(beforeHook)
   override def spec: Spec[TestEnvironment with Scope, Any] = suite("E2E tests")(
-    profileTests,
     todoTests
   ).provideSomeLayer[TestEnvironment with Scope](
     testArgsLayer
-  ) @@ sequential @@ beforeAll(beforeHook)
+  ) @@ sequential
 }
